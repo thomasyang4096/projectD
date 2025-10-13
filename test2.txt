@@ -1,0 +1,86 @@
+<%@ Page Language="VB" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>穩定互動 SVG 範例</title>
+    <style>
+        body {
+            margin: 0;
+            background: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #Panel1 {
+            width: 90%;
+            max-width: 1000px;
+            border: 1px solid #ccc;
+            background: #333;
+        }
+        /* hover 光暈 + 放大 */
+        .hoverGlow {
+            cursor: pointer;
+            transition: transform 0.2s; /* 只對 transform 過渡 */
+            transform-origin: center;
+        }
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+        <asp:Panel ID="Panel1" runat="server"></asp:Panel>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                // 綁定點擊事件
+                document.querySelectorAll(".clickableCircle").forEach(function(c) {
+                    c.addEventListener("click", function() {
+                        var url = c.dataset.url;
+                        if (url) window.open(url, "_blank");
+                    });
+                });
+            });
+        </script>
+    </form>
+</body>
+</html>
+2️⃣ Default.aspx.vb
+vbnet
+複製程式碼
+Imports System.Web.UI.HtmlControls
+
+Partial Class _Default
+    Inherits System.Web.UI.Page
+
+    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        Dim mySvg As New HtmlGenericControl("svg")
+        mySvg.Attributes("xmlns") = "http://www.w3.org/2000/svg"
+        mySvg.Attributes("width") = "800"
+        mySvg.Attributes("height") = "600"
+        mySvg.Attributes("viewBox") = "0 0 800 600"
+
+        mySvg.InnerHtml =
+            "<image href='images/background.jpg' xlink:href='images/background.jpg' width='800' height='600' />" &
+            "<defs>" &
+            "  <linearGradient id='grad1'>" &
+            "    <stop offset='0%' stop-color='red' />" &
+            "    <stop offset='100%' stop-color='yellow' />" &
+            "  </linearGradient>" &
+            "  <filter id='glow'>" &
+            "    <feGaussianBlur stdDeviation='4' result='blur' />" &
+            "    <feMerge>" &
+            "      <feMergeNode in='blur'/>" &
+            "      <feMergeNode in='SourceGraphic'/>" &
+            "    </feMerge>" &
+            "  </filter>" &
+            "</defs>" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/1' cx='200' cy='200' r='50' fill='url(#grad1)' filter='' onmouseover=""this.setAttribute('filter','url(#glow)')"" onmouseout=""this.setAttribute('filter','')"" />" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/2' cx='400' cy='300' r='40' fill='blue' filter='' onmouseover=""this.setAttribute('filter','url(#glow)')"" onmouseout=""this.setAttribute('filter','')"" />" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/3' cx='600' cy='400' r='60' fill='green' filter='' onmouseover=""this.setAttribute('filter','url(#glow)')"" onmouseout=""this.setAttribute('filter','')"" />" &
+            "<line x1='100' y1='100' x2='700' y2='500' stroke='white' stroke-width='5' />" &
+            "<text x='400' y='580' text-anchor='middle' fill='white' font-size='20'>穩定互動 SVG 範例</text>"
+
+        Panel1.Controls.Add(mySvg)
+    End Sub
+End Class
