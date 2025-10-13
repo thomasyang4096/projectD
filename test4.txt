@@ -1,0 +1,92 @@
+<%@ Page Language="VB" AutoEventWireup="false" CodeFile="Default.aspx.vb" Inherits="_Default" %>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>SVG 層疊陰影 + 點擊跳出範例</title>
+    <style>
+        body {
+            margin: 0;
+            background: #fff; /* 白色背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #Panel1 {
+            width: 90%;
+            max-width: 1000px;
+            border: 1px solid #ccc;
+            background: #fff;
+        }
+        .hoverGlow {
+            cursor: pointer;
+            transition: transform 0.2s;
+            transform-origin: center;
+        }
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+        <asp:Panel ID="Panel1" runat="server"></asp:Panel>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                document.querySelectorAll(".clickableCircle").forEach(function(c) {
+                    c.addEventListener("click", function(e) {
+                        var url = c.getAttribute("data-url");
+                        if(url) window.open(url, "_blank");
+                    });
+                });
+            });
+        </script>
+    </form>
+</body>
+</html>
+2️⃣ Default.aspx.vb
+vbnet
+複製程式碼
+Imports System.Web.UI.HtmlControls
+
+Partial Class _Default
+    Inherits System.Web.UI.Page
+
+    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        Dim mySvg As New HtmlGenericControl("svg")
+        mySvg.Attributes("xmlns") = "http://www.w3.org/2000/svg"
+        mySvg.Attributes("xmlns:xlink") = "http://www.w3.org/1999/xlink"
+        mySvg.Attributes("width") = "800"
+        mySvg.Attributes("height") = "600"
+        mySvg.Attributes("viewBox") = "0 0 800 600"
+
+        mySvg.InnerHtml =
+            "<defs>" &
+            "  <linearGradient id='grad1'>" &
+            "    <stop offset='0%' stop-color='red' />" &
+            "    <stop offset='100%' stop-color='yellow' />" &
+            "  </linearGradient>" &
+            "  <!-- 層疊深黑陰影 -->" &
+            "  <filter id='shadowGlow' x='-100%' y='-100%' width='300%' height='300%'>" &
+            "    <feGaussianBlur in='SourceAlpha' stdDeviation='6' result='blur1'/>" &
+            "    <feFlood flood-color='rgba(0,0,0,1)' result='color1'/>" &
+            "    <feComposite in='color1' in2='blur1' operator='in' result='shadow1'/>" &
+            "    <feGaussianBlur in='SourceAlpha' stdDeviation='6' result='blur2'/>" &
+            "    <feFlood flood-color='rgba(0,0,0,1)' result='color2'/>" &
+            "    <feComposite in='color2' in2='blur2' operator='in' result='shadow2'/>" &
+            "    <feMerge>" &
+            "      <feMergeNode in='shadow1'/>" &
+            "      <feMergeNode in='shadow2'/>" &
+            "      <feMergeNode in='SourceGraphic'/>" &
+            "    </feMerge>" &
+            "  </filter>" &
+            "</defs>" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/1' cx='200' cy='200' r='50' fill='url(#grad1)' filter='' onmouseover=""this.setAttribute('filter','url(#shadowGlow)')"" onmouseout=""this.setAttribute('filter','')""></circle>" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/2' cx='400' cy='300' r='40' fill='blue' filter='' onmouseover=""this.setAttribute('filter','url(#shadowGlow)')"" onmouseout=""this.setAttribute('filter','')""></circle>" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/3' cx='600' cy='400' r='60' fill='green' filter='' onmouseover=""this.setAttribute('filter','url(#shadowGlow)')"" onmouseout=""this.setAttribute('filter','')""></circle>" &
+            "<line x1='100' y1='100' x2='700' y2='500' stroke='black' stroke-width='5' />" &
+            "<text x='400' y='580' text-anchor='middle' fill='black' font-size='20'>層疊陰影 + 點擊跳出</text>"
+
+        Panel1.Controls.Add(mySvg)
+    End Sub
+End Class
+🔑 說明
