@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-    <title>SVG 發光 + 穩定 Tooltip 範例</title>
+    <title>SVG + Tooltip + 發光穩定版</title>
     <style>
         body {
             margin: 0;
@@ -12,6 +12,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            font-family: sans-serif;
         }
 
         #Panel1 {
@@ -19,11 +20,12 @@
             max-width: 1000px;
             border: 1px solid #ccc;
             background: #fff;
+            padding: 10px;
         }
 
         .hoverGlow {
             cursor: pointer;
-            transition: r 0.25s ease-out; /* 放大時用半徑變化，避免 transform 抖動 */
+            transition: r 0.25s ease-out;
         }
 
         #tooltip {
@@ -31,11 +33,10 @@
             padding: 8px;
             background: #fff;
             border: 1px solid #333;
-            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+            box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
             border-radius: 4px;
-            pointer-events: none; /* 防止閃爍 */
+            pointer-events: none; /* 防止滑鼠閃爍 */
             display: none;
-            font-family: sans-serif;
             font-size: 14px;
             z-index: 1000;
         }
@@ -57,51 +58,6 @@
     <form id="form1" runat="server">
         <asp:Panel ID="Panel1" runat="server"></asp:Panel>
         <div id="tooltip"></div>
-
-        <script>
-            window.onload = function () {
-                const tooltip = document.getElementById("tooltip");
-
-                function showTooltip(c) {
-                    const info = c.getAttribute("data-info").split("\n");
-                    let html = "<table>";
-                    info.forEach(row => {
-                        const parts = row.split(":");
-                        html += "<tr><td>" + parts[0] + "</td><td>" + parts[1] + "</td></tr>";
-                    });
-                    html += "</table>";
-                    tooltip.innerHTML = html;
-                    tooltip.style.display = "block";
-                }
-
-                function hideTooltip() {
-                    tooltip.style.display = "none";
-                }
-
-                document.querySelectorAll(".clickableCircle").forEach(c => {
-                    const baseR = parseFloat(c.getAttribute("r"));
-                    c.addEventListener("mouseover", e => {
-                        c.setAttribute('filter', 'url(#shadowGlow)');
-                        c.setAttribute('r', baseR * 1.2); // 放大用半徑
-                        showTooltip(c);
-                    });
-                    c.addEventListener("mousemove", e => {
-                        // tooltip 跟隨滑鼠位置
-                        tooltip.style.left = e.pageX + 10 + "px";
-                        tooltip.style.top = e.pageY + 10 + "px";
-                    });
-                    c.addEventListener("mouseout", e => {
-                        c.setAttribute('filter', '');
-                        c.setAttribute('r', baseR); // 回復大小
-                        hideTooltip();
-                    });
-                    c.addEventListener("click", e => {
-                        const url = c.getAttribute("data-url");
-                        if (url) window.open(url, "_blank");
-                    });
-                });
-            };
-        </script>
     </form>
 </body>
 </html>
@@ -114,6 +70,7 @@ Partial Class _Default
     Inherits System.Web.UI.Page
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        ' === 產生 SVG ===
         Dim mySvg As New HtmlGenericControl("svg")
         mySvg.Attributes("xmlns") = "http://www.w3.org/2000/svg"
         mySvg.Attributes("xmlns:xlink") = "http://www.w3.org/1999/xlink"
@@ -123,13 +80,9 @@ Partial Class _Default
 
         mySvg.InnerHtml =
             "<defs>" &
-            "  <linearGradient id='grad1'>" &
-            "    <stop offset='0%' stop-color='red' />" &
-            "    <stop offset='100%' stop-color='orange' />" &
-            "  </linearGradient>" &
             "  <filter id='shadowGlow' x='-150%' y='-150%' width='400%' height='400%'>" &
             "    <feGaussianBlur in='SourceAlpha' stdDeviation='8' result='blur1'/>" &
-            "    <feFlood flood-color='rgba(0,0,0,1)' result='color1'/>" &
+            "    <feFlood flood-color='rgba(0,0,0,0.9)' result='color1'/>" &
             "    <feComposite in='color1' in2='blur1' operator='in' result='shadow1'/>" &
             "    <feMerge>" &
             "      <feMergeNode in='shadow1'/>" &
@@ -137,12 +90,60 @@ Partial Class _Default
             "    </feMerge>" &
             "  </filter>" &
             "</defs>" &
-            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/1' cx='200' cy='200' r='50' fill='url(#grad1)' data-info='名稱:紅圈\n值:100\n狀態:啟用'></circle>" &
+            "<circle class='hoverGlow clickableCircle' data-url='https://example.com/1' cx='200' cy='200' r='50' fill='red' data-info='名稱:紅圈\n值:100\n狀態:啟用'></circle>" &
             "<circle class='hoverGlow clickableCircle' data-url='https://example.com/2' cx='400' cy='350' r='40' fill='blue' data-info='名稱:藍圈\n值:80\n狀態:停用'></circle>" &
             "<circle class='hoverGlow clickableCircle' data-url='https://example.com/3' cx='600' cy='250' r='60' fill='green' data-info='名稱:綠圈\n值:120\n狀態:啟用'></circle>" &
             "<line x1='200' y1='200' x2='400' y2='350' stroke='black' stroke-width='4' />" &
             "<line x1='400' y1='350' x2='600' y2='250' stroke='black' stroke-width='4' />"
 
+        Panel1.Controls.Add(mySvg)
+
+        ' === 確保在 SVG 生成完後綁定事件 ===
+        Dim js As String = "
+            const tooltip = document.getElementById('tooltip');
+
+            function showTooltip(c) {
+                const info = c.getAttribute('data-info').split('\n');
+                let html = '<table>';
+                info.forEach(row => {
+                    const parts = row.split(':');
+                    html += '<tr><td>' + parts[0] + '</td><td>' + parts[1] + '</td></tr>';
+                });
+                html += '</table>';
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+            }
+
+            function hideTooltip() {
+                tooltip.style.display = 'none';
+            }
+
+            document.querySelectorAll('.clickableCircle').forEach(c => {
+                const baseR = parseFloat(c.getAttribute('r'));
+                c.addEventListener('mouseover', e => {
+                    c.setAttribute('filter','url(#shadowGlow)');
+                    c.setAttribute('r', baseR * 1.2);
+                    showTooltip(c);
+                });
+                c.addEventListener('mousemove', e => {
+                    tooltip.style.left = e.pageX + 10 + 'px';
+                    tooltip.style.top = e.pageY + 10 + 'px';
+                });
+                c.addEventListener('mouseout', e => {
+                    c.setAttribute('filter','');
+                    c.setAttribute('r', baseR);
+                    hideTooltip();
+                });
+                c.addEventListener('click', e => {
+                    const url = c.getAttribute('data-url');
+                    if (url) window.open(url, '_blank');
+                });
+            });
+        "
+
+        ScriptManager.RegisterStartupScript(Me, Me.GetType(), "bindSvgEvents", js, True)
+    End Sub
+End Class
         Panel1.Controls.Add(mySvg)
     End Sub
 End Class
