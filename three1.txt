@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>3 Floors View (Three.js)</title>
+  <style>body { margin: 0; overflow: hidden; }</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 100, 200);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(100, 200, 100);
+  scene.add(light);
+
+  const textureLoader = new THREE.TextureLoader();
+
+  const floorFiles = [
+    { file: 'floor1.svg', height: 0, color: 0xffffff },
+    { file: 'floor2.svg', height: 20, color: 0xffffff },
+    { file: 'floor3.svg', height: 40, color: 0xffffff }
+  ];
+
+  floorFiles.forEach((f, i) => {
+    const texture = textureLoader.load(f.file);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.9, // 半透明
+      side: THREE.DoubleSide
+    });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), material);
+    plane.position.y = f.height; // 設定每層高度
+    plane.rotation.x = -Math.PI / 2; // 旋轉成水平面
+    scene.add(plane);
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+</script>
+</body>
+</html>
