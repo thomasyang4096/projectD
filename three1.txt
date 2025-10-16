@@ -2,88 +2,67 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>3D 三層平面圖 - 可見成功版</title>
+  <title>Three.js 三層平面圖 Debug 版</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #222; }
-    #msg {
-      position: fixed;
-      top: 10px; left: 10px;
-      color: #0f0;
-      background: rgba(0,0,0,0.6);
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-family: monospace;
-      font-size: 14px;
-    }
+    body { margin: 0; overflow: hidden; background: #111; }
   </style>
 </head>
 <body>
-<div id="msg">載入中...</div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
+  // === 場景 ===
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x222222);
+  scene.background = new THREE.Color(0x111111);
 
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
-  camera.position.set(600, 800, 600); // 從斜上方看下來
+  // === 相機 ===
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+  camera.position.set(500, 500, 500);
   camera.lookAt(0, 0, 0);
 
+  // === 渲染器 ===
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
+  // === 控制器 ===
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0, 0);
   controls.enableDamping = true;
 
   // === 光源 ===
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(300, 600, 300);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0x555555));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(300, 500, 300);
+  scene.add(dirLight);
 
-  // === 樓層設定 ===
-  const floorFiles = [
-    { file: 'floor1.svg', height: 0,   color: 0x33aaff },
-    { file: 'floor2.svg', height: 100, color: 0x33ffaa },
-    { file: 'floor3.svg', height: 200, color: 0xffaa33 }
-  ];
+  // === 網格地板 (1000x1000) ===
+  const grid = new THREE.GridHelper(1000, 20, 0x444444, 0x222222);
+  scene.add(grid);
 
-  const loader = new THREE.TextureLoader();
+  // === 坐標軸輔助線 ===
+  const axes = new THREE.AxesHelper(300);
+  scene.add(axes);
 
-  floorFiles.forEach((f) => {
-    // 預設為色塊地板
-    const material = new THREE.MeshBasicMaterial({
-      color: f.color,
+  // === 三層假地板 ===
+  const colors = [0x33aaff, 0x33ffaa, 0xffaa33];
+  const heights = [0, 100, 200];
+
+  for (let i = 0; i < 3; i++) {
+    const geo = new THREE.PlaneGeometry(800, 800);
+    const mat = new THREE.MeshBasicMaterial({
+      color: colors[i],
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.4,
       side: THREE.DoubleSide
     });
+    const floor = new THREE.Mesh(geo, mat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = heights[i];
+    scene.add(floor);
+  }
 
-    // 嘗試載入平面圖（如果有圖就蓋上貼圖）
-    loader.load(
-      f.file,
-      (texture) => {
-        material.map = texture;
-        material.opacity = 0.9;
-        material.needsUpdate = true;
-      },
-      undefined,
-      () => console.warn(`⚠️ 無法載入 ${f.file}，以顏色代替`)
-    );
-
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(1000, 1000),
-      material
-    );
-    plane.rotation.x = -Math.PI / 2; // 轉成水平地板
-    plane.position.y = f.height;
-    scene.add(plane);
-  });
-
-  // === 加一個彩色立方體方便定位 ===
+  // === 測試立方體在中央 ===
   const box = new THREE.Mesh(
     new THREE.BoxGeometry(50, 50, 50),
     new THREE.MeshNormalMaterial()
@@ -91,26 +70,21 @@
   box.position.set(0, 25, 0);
   scene.add(box);
 
-  // === 坐標輔助線 ===
-  const axes = new THREE.AxesHelper(500);
-  scene.add(axes);
-
-  // === 視窗自適應 ===
+  // === 自動調整視窗 ===
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // === 主動畫 ===
+  // === 動畫 ===
   function animate() {
     requestAnimationFrame(animate);
+    box.rotation.y += 0.01;
     controls.update();
     renderer.render(scene, camera);
   }
   animate();
-
-  document.getElementById('msg').innerText = '✅ 成功載入！可用滑鼠旋轉、滾輪縮放';
 </script>
 </body>
 </html>
