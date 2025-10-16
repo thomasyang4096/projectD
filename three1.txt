@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>3D 三層平面圖 - 防呆版</title>
+  <title>3D 三層平面圖 - 可見版</title>
   <style>
     body { margin: 0; overflow: hidden; background: #222; }
   </style>
@@ -16,8 +16,9 @@
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x222222);
 
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 150, 300);
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 400, 600); // 拉遠鏡頭
+  camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -28,20 +29,20 @@
 
   // === 燈光 ===
   const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(100, 200, 100);
+  light.position.set(500, 1000, 500);
   scene.add(light);
 
   // === 地板設定 ===
   const floorFiles = [
     { file: 'floor1.svg', height: 0,   color: 0x33aaff },
-    { file: 'floor2.svg', height: 30,  color: 0x33ffaa },
-    { file: 'floor3.svg', height: 60,  color: 0xffaa33 }
+    { file: 'floor2.svg', height: 50,  color: 0x33ffaa },
+    { file: 'floor3.svg', height: 100, color: 0xffaa33 }
   ];
 
   const textureLoader = new THREE.TextureLoader();
 
-  floorFiles.forEach((f, i) => {
-    // 建立預設材質（有顏色）
+  floorFiles.forEach((f) => {
+    // 預設材質（顏色地板）
     let material = new THREE.MeshBasicMaterial({
       color: f.color,
       transparent: true,
@@ -49,7 +50,7 @@
       side: THREE.DoubleSide
     });
 
-    // 嘗試載入圖片，如果成功就用圖片當貼圖
+    // 嘗試載入圖片，如果成功就套用貼圖
     textureLoader.load(
       f.file,
       (texture) => {
@@ -63,13 +64,21 @@
       }
     );
 
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), material);
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), material);
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = f.height;
     scene.add(plane);
   });
 
-  // === 自動調整視窗大小 ===
+  // === 測試立方體（確認場景正常） ===
+  const testBox = new THREE.Mesh(
+    new THREE.BoxGeometry(50, 50, 50),
+    new THREE.MeshNormalMaterial()
+  );
+  testBox.position.set(0, 25, 0);
+  scene.add(testBox);
+
+  // === 視窗大小調整 ===
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
