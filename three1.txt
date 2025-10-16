@@ -2,61 +2,115 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>Three.js 可見測試</title>
+  <title>3D 三層平面圖 - 可見成功版</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #111; }
+    body { margin: 0; overflow: hidden; background: #222; }
     #msg {
       position: fixed;
       top: 10px; left: 10px;
       color: #0f0;
       background: rgba(0,0,0,0.6);
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 8px;
       font-family: monospace;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 <div id="msg">載入中...</div>
-
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script>
-try {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 0, 5);
+<script>
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x222222);
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+  camera.position.set(600, 800, 600); // 從斜上方看下來
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // 建立立方體
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshNormalMaterial();
-  const cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0, 0);
+  controls.enableDamping = true;
 
-  // 加入文字光標線（坐標軸）
-  const axesHelper = new THREE.AxesHelper(5);
-  scene.add(axesHelper);
+  // === 光源 ===
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(300, 600, 300);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x555555));
 
-  // 動畫
+  // === 樓層設定 ===
+  const floorFiles = [
+    { file: 'floor1.svg', height: 0,   color: 0x33aaff },
+    { file: 'floor2.svg', height: 100, color: 0x33ffaa },
+    { file: 'floor3.svg', height: 200, color: 0xffaa33 }
+  ];
+
+  const loader = new THREE.TextureLoader();
+
+  floorFiles.forEach((f) => {
+    // 預設為色塊地板
+    const material = new THREE.MeshBasicMaterial({
+      color: f.color,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide
+    });
+
+    // 嘗試載入平面圖（如果有圖就蓋上貼圖）
+    loader.load(
+      f.file,
+      (texture) => {
+        material.map = texture;
+        material.opacity = 0.9;
+        material.needsUpdate = true;
+      },
+      undefined,
+      () => console.warn(`⚠️ 無法載入 ${f.file}，以顏色代替`)
+    );
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(1000, 1000),
+      material
+    );
+    plane.rotation.x = -Math.PI / 2; // 轉成水平地板
+    plane.position.y = f.height;
+    scene.add(plane);
+  });
+
+  // === 加一個彩色立方體方便定位 ===
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(50, 50, 50),
+    new THREE.MeshNormalMaterial()
+  );
+  box.position.set(0, 25, 0);
+  scene.add(box);
+
+  // === 坐標輔助線 ===
+  const axes = new THREE.AxesHelper(500);
+  scene.add(axes);
+
+  // === 視窗自適應 ===
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // === 主動畫 ===
   function animate() {
     requestAnimationFrame(animate);
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.02;
+    controls.update();
     renderer.render(scene, camera);
   }
   animate();
 
-  document.getElementById('msg').innerText = '✅ 成功載入！如果沒看到旋轉立方體 → 請滾滑鼠滾輪或拖拉視角';
-} catch (err) {
-  document.getElementById('msg').innerText = '❌ 發生錯誤：' + err.message;
-  console.error(err);
-}
+  document.getElementById('msg').innerText = '✅ 成功載入！可用滑鼠旋轉、滾輪縮放';
 </script>
 </body>
 </html>
