@@ -2,22 +2,20 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>3D 三層平面圖 - 可見版</title>
+  <title>Three.js 測試立方體</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #222; }
+    body { margin: 0; overflow: hidden; background: #111; }
   </style>
 </head>
 <body>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-
 <script>
-  // === 場景、相機、渲染器 ===
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x222222);
+  scene.background = new THREE.Color(0x111111);
 
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-  camera.position.set(0, 400, 600); // 拉遠鏡頭
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.z = 5;
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -25,69 +23,17 @@
   document.body.appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
 
-  // === 燈光 ===
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(500, 1000, 500);
-  scene.add(light);
+  // === 建立一個立方體 ===
+  const geometry = new THREE.BoxGeometry();
+  const material = new THREE.MeshNormalMaterial();
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
 
-  // === 地板設定 ===
-  const floorFiles = [
-    { file: 'floor1.svg', height: 0,   color: 0x33aaff },
-    { file: 'floor2.svg', height: 50,  color: 0x33ffaa },
-    { file: 'floor3.svg', height: 100, color: 0xffaa33 }
-  ];
-
-  const textureLoader = new THREE.TextureLoader();
-
-  floorFiles.forEach((f) => {
-    // 預設材質（顏色地板）
-    let material = new THREE.MeshBasicMaterial({
-      color: f.color,
-      transparent: true,
-      opacity: 0.5,
-      side: THREE.DoubleSide
-    });
-
-    // 嘗試載入圖片，如果成功就套用貼圖
-    textureLoader.load(
-      f.file,
-      (texture) => {
-        material.map = texture;
-        material.opacity = 0.9;
-        material.needsUpdate = true;
-      },
-      undefined,
-      (error) => {
-        console.warn(`⚠️ 無法載入 ${f.file}，使用顏色地板代替`);
-      }
-    );
-
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), material);
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.y = f.height;
-    scene.add(plane);
-  });
-
-  // === 測試立方體（確認場景正常） ===
-  const testBox = new THREE.Mesh(
-    new THREE.BoxGeometry(50, 50, 50),
-    new THREE.MeshNormalMaterial()
-  );
-  testBox.position.set(0, 25, 0);
-  scene.add(testBox);
-
-  // === 視窗大小調整 ===
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  // === 主動畫迴圈 ===
   function animate() {
     requestAnimationFrame(animate);
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.01;
     controls.update();
     renderer.render(scene, camera);
   }
