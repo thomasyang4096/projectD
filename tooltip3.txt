@@ -77,9 +77,15 @@ Partial Class _Default
         mySvg.Attributes("width") = "800"
         mySvg.Attributes("height") = "600"
         mySvg.Attributes("viewBox") = "0 0 800 600"
+Dim gridSize As Integer = 50
+Dim labelInterval As Integer = 100
 
         mySvg.InnerHtml =
             "<defs>" &
+
+  <pattern id='grid' width='" & gridSize & "' height='" & gridSize & "' patternUnits='userSpaceOnUse'>
+    <path d='M" & gridSize & " 0 L0 0 0 " & gridSize & "' fill='none' stroke='#ddd' stroke-width='1' />
+  </pattern>
             "  <filter id='shadowGlow' x='-150%' y='-150%' width='400%' height='400%'>" &
             "    <feGaussianBlur in='SourceAlpha' stdDeviation='8' result='blur1'/>" &
             "    <feFlood flood-color='rgba(0,0,0,0.9)' result='color1'/>" &
