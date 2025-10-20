@@ -96,6 +96,16 @@ Dim labelInterval As Integer = 100
             "    </feMerge>" &
             "  </filter>" &
             "</defs>" &
+
+
+<!-- 背景格線 -->
+<rect x='0' y='0' width='800' height='600' fill='url(#grid)'/>
+
+<!-- 主軸線 -->
+<line x1='0' y1='300' x2='800' y2='300' stroke='#aaa' stroke-width='2'/>
+<line x1='400' y1='0' x2='400' y2='600' stroke='#aaa' stroke-width='2'/>
+
+
             "<circle class='hoverGlow clickableCircle' data-url='https://example.com/1' cx='200' cy='200' r='50' fill='red' data-info='名稱:紅圈\n值:100\n狀態:啟用'></circle>" &
             "<circle class='hoverGlow clickableCircle' data-url='https://example.com/2' cx='400' cy='350' r='40' fill='blue' data-info='名稱:藍圈\n值:80\n狀態:停用'></circle>" &
             "<circle class='hoverGlow clickableCircle' data-url='https://example.com/3' cx='600' cy='250' r='60' fill='green' data-info='名稱:綠圈\n值:120\n狀態:啟用'></circle>" &
