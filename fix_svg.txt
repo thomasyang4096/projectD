@@ -13,3 +13,31 @@
       left: 0;
   }
 </style>
+
+
+<asp:Panel ID="Panel1" runat="server" 
+    Style="position:relative; width:800px; height:600px; overflow:hidden; border:1px solid #aaa;">
+</asp:Panel>
+
+
+mySvg.Attributes("viewBox") = "0 0 800 600"
+mySvg.Attributes("style") = "position:absolute; left:0; top:0;"
+
+Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+    If Not IsPostBack Then
+        BuildSvg() ' 只在第一次載入時建立
+    End If
+End Sub
+
+Private Sub BuildSvg()
+    Dim mySvg As New HtmlGenericControl("svg")
+    mySvg.Attributes("xmlns") = "http://www.w3.org/2000/svg"
+    mySvg.Attributes("width") = "800"
+    mySvg.Attributes("height") = "600"
+    mySvg.Attributes("viewBox") = "0 0 800 600"
+    mySvg.Attributes("preserveAspectRatio") = "none"
+    mySvg.Attributes("style") = "position:absolute; left:0; top:0;"
+
+    mySvg.InnerHtml = "..." ' 你的SVG內容
+    Panel1.Controls.Add(mySvg)
+End Sub
