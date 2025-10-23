@@ -41,3 +41,14 @@ Private Sub BuildSvg()
     mySvg.InnerHtml = "..." ' 你的SVG內容
     Panel1.Controls.Add(mySvg)
 End Sub
+
+
+mySvg.Attributes("width") = "100%"
+mySvg.Attributes("height") = "100%"
+mySvg.Attributes("viewBox") = "0 0 800 600"
+mySvg.Attributes("preserveAspectRatio") = "xMidYMid meet"
+mySvg.Attributes("style") = "position:absolute; left:0; top:0;"
+
+<asp:Panel ID="Panel1" runat="server" 
+    Style="position:relative; width:800px; height:600px; border:1px solid #aaa;">
+</asp:Panel>
