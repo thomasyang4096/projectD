@@ -1,0 +1,15 @@
+<style>
+  #Panel1 {
+      position: relative;
+      width: 800px;       /* 或你 SVG 的寬度 */
+      height: 600px;
+      margin: 0 auto;     /* 讓它置中 */
+      border: 1px solid #ccc;
+      overflow: hidden;
+  }
+  #Panel1 svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+  }
+</style>
