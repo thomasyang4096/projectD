@@ -1,32 +1,30 @@
 <%@ page isErrorPage="true" contentType="text/html; charset=UTF-8" %>
 <html>
-<head>
-    <title>頁面發生錯誤</title>
-    <style>
-        body { font-family: Arial; background-color: #f8f8f8; color: #333; margin: 50px; }
-        .error-box { border: 1px solid #ccc; background: #fff; padding: 20px; border-radius: 8px; }
-    </style>
-</head>
+<head><title>頁面發生錯誤</title></head>
 <body>
-<div class="error-box">
-    <h3>抱歉，頁面發生錯誤</h3>
+<%
+    // Tomcat 給的是 root cause，要自己往上找外層 Exception
+    Throwable outer = exception;
+    Throwable current = exception;
+    while (current != null) {
+        outer = current; 
+        current = current.getCause();
+    }
 
-    <% 
-        // 取得這個 Exception 自己的 StackTrace，而不是 root cause
-        StackTraceElement[] trace = exception.getStackTrace();
-        if (trace != null && trace.length > 0) {
-            StackTraceElement first = trace[0];
-    %>
-
-    <p>錯誤類型：<%= exception.getClass().getSimpleName() %></p>
-    <p>發生位置：<%= first.getClassName() %>.<%= first.getMethodName() %>() 第 <%= first.getLineNumber() %> 行</p>
-
-    <% 
-        } else { 
-    %>
-    <p>無法取得行號。</p>
-    <% } %>
-
-</div>
+    // outer 現在是最外層 exception（例如 ServletException）
+    StackTraceElement[] trace = outer.getStackTrace();
+    if (trace != null && trace.length > 0) {
+        StackTraceElement first = trace[0];
+%>
+        <h3>發生例外：<%= outer.getClass().getSimpleName() %></h3>
+        <p>訊息：<%= outer.getMessage() %></p>
+        <p>行號：<%= first.getLineNumber() %></p>
+<%
+    } else {
+%>
+        <p>無法取得行號。</p>
+<%
+    }
+%>
 </body>
 </html>
