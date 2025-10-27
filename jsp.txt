@@ -1,42 +1,20 @@
-<%@ page isErrorPage="true" contentType="text/html; charset=UTF-8" %>
-<html>
-<head>
-  <meta charset="UTF-8"/>
-  <title>頁面發生錯誤</title>
-  <style>
-    body { font-family: Arial; background-color: #f8f8f8; color: #333; margin: 40px; }
-    .error-box { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
-  </style>
-</head>
-<body>
-<div class="error-box">
-  <h3>抱歉，頁面發生錯誤</h3>
+<%@ page errorPage="error.jsp" %>
 <%
-    // Tomcat會把畫面上 "Exception" 那一層放在 request attribute 中
-    Throwable topException = (Throwable) request.getAttribute("javax.servlet.error.exception");
-
-    // 有時 attribute 沒有值（某些容器行為不同），就退回 page 的 exception（root cause）
-    if (topException == null) {
-        topException = exception;
-    }
-
-    StackTraceElement first = null;
-    if (topException != null && topException.getStackTrace().length > 0) {
-        first = topException.getStackTrace()[0];
-    }
+try {
+    int x = 1 / 0; // 故意出錯
+} catch (Throwable e) {
+    // 這裡的 e 就是「畫面上那個 Exception」
+    request.setAttribute("jspException", e);
+    throw e; // 讓它繼續進 error.jsp
+}
 %>
 
-  <% if (topException != null) { %>
-    <p><strong>例外類型：</strong> <%= topException.getClass().getName() %></p>
-    <p><strong>訊息：</strong> <%= topException.getMessage() == null ? "(無訊息)" : topException.getMessage() %></p>
-    <% if (first != null) { %>
-      <p><strong>行號：</strong> <%= first.getClassName() %>.<%= first.getMethodName() %>() 第 <%= first.getLineNumber() %> 行</p>
-    <% } %>
-  <% } else { %>
-    <p>無法取得 Exception 資訊。</p>
-  <% } %>
 
-  <p style="font-size: 0.9em; color: #666;">若問題持續發生，請聯絡系統管理員。</p>
-</div>
-</body>
-</html>
+
+<%@ page isErrorPage="true" %>
+<%
+Throwable t = (Throwable) request.getAttribute("jspException");
+if (t == null) t = exception;
+%>
+<p>Exception 類型：<%= t.getClass().getName() %></p>
+<p>行號：<%= t.getStackTrace()[0].getLineNumber() %></p>
