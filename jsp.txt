@@ -10,13 +10,23 @@
 <body>
 <div class="error-box">
     <h3>抱歉，頁面發生錯誤</h3>
-    <p>錯誤類型：<%= exception.getClass().getSimpleName() %></p>
-    <p>錯誤行號：<%= exception.getStackTrace()[0].getLineNumber() %></p>
-    <!-- 可選：記錄錯誤到 log -->
+
     <% 
-       // 你可以在這裡記錄 log（若有 logging 機制）
-       // System.err.println("Error at line " + exception.getStackTrace()[0].getLineNumber());
+        // 取得這個 Exception 自己的 StackTrace，而不是 root cause
+        StackTraceElement[] trace = exception.getStackTrace();
+        if (trace != null && trace.length > 0) {
+            StackTraceElement first = trace[0];
     %>
+
+    <p>錯誤類型：<%= exception.getClass().getSimpleName() %></p>
+    <p>發生位置：<%= first.getClassName() %>.<%= first.getMethodName() %>() 第 <%= first.getLineNumber() %> 行</p>
+
+    <% 
+        } else { 
+    %>
+    <p>無法取得行號。</p>
+    <% } %>
+
 </div>
 </body>
 </html>
