@@ -1,49 +1,42 @@
 <%@ page isErrorPage="true" contentType="text/html; charset=UTF-8" %>
-<%@ page import="java.io.*,java.util.*" %>
 <html>
 <head>
   <meta charset="UTF-8"/>
-  <title>系統發生錯誤</title>
+  <title>頁面發生錯誤</title>
   <style>
-    body { font-family: Arial; background-color: #f8f8f8; color: #333; margin: 50px; }
-    .error-box { border: 1px solid #ccc; background: #fff; padding: 20px; border-radius: 8px; }
+    body { font-family: Arial; background-color: #f8f8f8; color: #333; margin: 40px; }
+    .error-box { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
   </style>
 </head>
 <body>
 <div class="error-box">
-  <h3>抱歉，系統發生例外</h3>
+  <h3>抱歉，頁面發生錯誤</h3>
 <%
-    // 優先使用 request attribute（外層例外），若無則使用 page exception
-    Throwable chosen = null;
-    Object attr = request.getAttribute("javax.servlet.error.exception");
-    if (attr instanceof Throwable && attr != exception) {
-        chosen = (Throwable) attr; // 外層例外
-    } else {
-        chosen = exception; // fallback: root cause
+    // Tomcat會把畫面上 "Exception" 那一層放在 request attribute 中
+    Throwable topException = (Throwable) request.getAttribute("javax.servlet.error.exception");
+
+    // 有時 attribute 沒有值（某些容器行為不同），就退回 page 的 exception（root cause）
+    if (topException == null) {
+        topException = exception;
     }
 
-    StackTraceElement firstElem = null;
-    if (chosen != null) {
-        StackTraceElement[] st = chosen.getStackTrace();
-        if (st != null && st.length > 0) {
-            firstElem = st[0];
-        }
+    StackTraceElement first = null;
+    if (topException != null && topException.getStackTrace().length > 0) {
+        first = topException.getStackTrace()[0];
     }
 %>
 
-  <% if (chosen != null) { %>
-    <p><strong>例外類型：</strong> <%= chosen.getClass().getName() %></p>
-    <p><strong>訊息：</strong> <%= chosen.getMessage() == null ? "(無訊息)" : chosen.getMessage() %></p>
-    <% if (firstElem != null) { %>
-      <p><strong>行號：</strong> <%= firstElem.getClassName() %>.<%= firstElem.getMethodName() %>() 第 <%= firstElem.getLineNumber() %> 行</p>
-    <% } else { %>
-      <p>無法取得行號。</p>
+  <% if (topException != null) { %>
+    <p><strong>例外類型：</strong> <%= topException.getClass().getName() %></p>
+    <p><strong>訊息：</strong> <%= topException.getMessage() == null ? "(無訊息)" : topException.getMessage() %></p>
+    <% if (first != null) { %>
+      <p><strong>行號：</strong> <%= first.getClassName() %>.<%= first.getMethodName() %>() 第 <%= first.getLineNumber() %> 行</p>
     <% } %>
   <% } else { %>
-    <p>無法取得 Exception 物件。</p>
+    <p>無法取得 Exception 資訊。</p>
   <% } %>
 
-  <p style="font-size: 0.9em; color: #666; margin-top: 20px;">若問題持續發生，請聯絡系統管理員。</p>
+  <p style="font-size: 0.9em; color: #666;">若問題持續發生，請聯絡系統管理員。</p>
 </div>
 </body>
 </html>
