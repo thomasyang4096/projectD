@@ -1,0 +1,22 @@
+<%@ page isErrorPage="true" contentType="text/html; charset=UTF-8" %>
+<html>
+<head>
+    <title>頁面發生錯誤</title>
+    <style>
+        body { font-family: Arial; background-color: #f8f8f8; color: #333; margin: 50px; }
+        .error-box { border: 1px solid #ccc; background: #fff; padding: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+<div class="error-box">
+    <h3>抱歉，頁面發生錯誤</h3>
+    <p>錯誤類型：<%= exception.getClass().getSimpleName() %></p>
+    <p>錯誤行號：<%= exception.getStackTrace()[0].getLineNumber() %></p>
+    <!-- 可選：記錄錯誤到 log -->
+    <% 
+       // 你可以在這裡記錄 log（若有 logging 機制）
+       // System.err.println("Error at line " + exception.getStackTrace()[0].getLineNumber());
+    %>
+</div>
+</body>
+</html>
