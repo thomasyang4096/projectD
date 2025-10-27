@@ -1,30 +1,49 @@
 <%@ page isErrorPage="true" contentType="text/html; charset=UTF-8" %>
+<%@ page import="java.io.*,java.util.*" %>
 <html>
-<head><title>頁面發生錯誤</title></head>
+<head>
+  <meta charset="UTF-8"/>
+  <title>系統發生錯誤</title>
+  <style>
+    body { font-family: Arial; background-color: #f8f8f8; color: #333; margin: 50px; }
+    .error-box { border: 1px solid #ccc; background: #fff; padding: 20px; border-radius: 8px; }
+  </style>
+</head>
 <body>
+<div class="error-box">
+  <h3>抱歉，系統發生例外</h3>
 <%
-    // Tomcat 給的是 root cause，要自己往上找外層 Exception
-    Throwable outer = exception;
-    Throwable current = exception;
-    while (current != null) {
-        outer = current; 
-        current = current.getCause();
+    // 優先使用 request attribute（外層例外），若無則使用 page exception
+    Throwable chosen = null;
+    Object attr = request.getAttribute("javax.servlet.error.exception");
+    if (attr instanceof Throwable && attr != exception) {
+        chosen = (Throwable) attr; // 外層例外
+    } else {
+        chosen = exception; // fallback: root cause
     }
 
-    // outer 現在是最外層 exception（例如 ServletException）
-    StackTraceElement[] trace = outer.getStackTrace();
-    if (trace != null && trace.length > 0) {
-        StackTraceElement first = trace[0];
-%>
-        <h3>發生例外：<%= outer.getClass().getSimpleName() %></h3>
-        <p>訊息：<%= outer.getMessage() %></p>
-        <p>行號：<%= first.getLineNumber() %></p>
-<%
-    } else {
-%>
-        <p>無法取得行號。</p>
-<%
+    StackTraceElement firstElem = null;
+    if (chosen != null) {
+        StackTraceElement[] st = chosen.getStackTrace();
+        if (st != null && st.length > 0) {
+            firstElem = st[0];
+        }
     }
 %>
+
+  <% if (chosen != null) { %>
+    <p><strong>例外類型：</strong> <%= chosen.getClass().getName() %></p>
+    <p><strong>訊息：</strong> <%= chosen.getMessage() == null ? "(無訊息)" : chosen.getMessage() %></p>
+    <% if (firstElem != null) { %>
+      <p><strong>行號：</strong> <%= firstElem.getClassName() %>.<%= firstElem.getMethodName() %>() 第 <%= firstElem.getLineNumber() %> 行</p>
+    <% } else { %>
+      <p>無法取得行號。</p>
+    <% } %>
+  <% } else { %>
+    <p>無法取得 Exception 物件。</p>
+  <% } %>
+
+  <p style="font-size: 0.9em; color: #666; margin-top: 20px;">若問題持續發生，請聯絡系統管理員。</p>
+</div>
 </body>
 </html>
