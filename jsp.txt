@@ -1,20 +1,52 @@
 <%@ page errorPage="error.jsp" %>
 <%
 try {
-    int x = 1 / 0; // 故意出錯
-} catch (Throwable e) {
-    // 這裡的 e 就是「畫面上那個 Exception」
-    request.setAttribute("jspException", e);
-    throw e; // 讓它繼續進 error.jsp
+    // ===== 你的原始程式碼開始 =====
+    int x = 1 / 0;  // 故意錯誤
+    // ===== 你的原始程式碼結束 =====
+} catch (Throwable t) {
+    // t 就是畫面上的 Exception（最外層）
+    request.setAttribute("outerException", t);
+    throw t; // 交給 error.jsp 處理
 }
 %>
 
 
 
-<%@ page isErrorPage="true" %>
+<%@ page isErrorPage="true" contentType="text/html; charset=UTF-8" %>
+<html>
+<head><meta charset="UTF-8"/><title>錯誤頁</title></head>
+<body>
 <%
-Throwable t = (Throwable) request.getAttribute("jspException");
-if (t == null) t = exception;
+    // 先抓外層 Exception（畫面上的 Exception）
+    Throwable outer = (Throwable) request.getAttribute("outerException");
+    if (outer == null) outer = exception; // fallback
+
+    StackTraceElement firstOuter = null;
+    if (outer != null && outer.getStackTrace().length > 0) {
+        firstOuter = outer.getStackTrace()[0];
+    }
+
+    // 抓 root cause
+    Throwable root = outer;
+    while (root != null && root.getCause() != null) {
+        root = root.getCause();
+    }
+    StackTraceElement firstRoot = (root != null && root.getStackTrace().length > 0) ? root.getStackTrace()[0] : null;
 %>
-<p>Exception 類型：<%= t.getClass().getName() %></p>
-<p>行號：<%= t.getStackTrace()[0].getLineNumber() %></p>
+
+<h2>外層 Exception（畫面上的 Exception）</h2>
+<% if (outer != null) { %>
+<p>類型：<%= outer.getClass().getName() %></p>
+<p>訊息：<%= outer.getMessage() %></p>
+<p>行號：<%= firstOuter != null ? firstOuter.getClassName() + "." + firstOuter.getMethodName() + "() 行 " + firstOuter.getLineNumber() : "無法取得行號" %></p>
+<% } %>
+
+<h2>Root Cause</h2>
+<% if (root != null) { %>
+<p>類型：<%= root.getClass().getName() %></p>
+<p>訊息：<%= root.getMessage() %></p>
+<p>行號：<%= firstRoot != null ? firstRoot.getClassName() + "." + firstRoot.getMethodName() + "() 行 " + firstRoot.getLineNumber() : "無法取得行號" %></p>
+<% } %>
+</body>
+</html>
