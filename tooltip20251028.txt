@@ -1,0 +1,30 @@
+Dim js As String = "
+Sys.Application.add_load(function() {
+    const tooltip = document.getElementById('tooltip');
+    if(!tooltip) return;
+
+    document.querySelectorAll('.clickableCircle').forEach(c => {
+        const baseR = parseFloat(c.getAttribute('r'));
+
+        c.addEventListener('mouseover', e => {
+            c.setAttribute('filter','url(#shadowGlow)');
+            c.setAttribute('r', baseR * 1.2);
+            showTooltip(c);
+        });
+        c.addEventListener('mousemove', e => {
+            tooltip.style.left = e.pageX + 10 + 'px';
+            tooltip.style.top = e.pageY + 10 + 'px';
+        });
+        c.addEventListener('mouseout', e => {
+            c.setAttribute('filter','');
+            c.setAttribute('r', baseR);
+            hideTooltip();
+        });
+        c.addEventListener('click', e => {
+            const url = c.getAttribute('data-url');
+            if (url) window.open(url, '_blank');
+        });
+    });
+});
+"
+ScriptManager.RegisterStartupScript(Me, Me.GetType(), "bindSvgEvents", js, True)
