@@ -2,8 +2,10 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>GLB + 箭頭 + 光暈球 + 箭頭動態</title>
-<style> body { margin:0; overflow:hidden; background:#111; } </style>
+<title>GLB + 箭頭動態 + glowGroup 光暈</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #111; }
+</style>
 
 <script type="importmap">
 {
@@ -20,17 +22,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/loaders/GLTFLoader.js';
 
-// === 場景、相機、渲染器 ===
+// === 基本設定 ===
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
 camera.position.set(5, 5, 5);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// === 控制器 ===
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
@@ -40,89 +41,79 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 1);
 dirLight.position.set(10, 10, 10);
 scene.add(dirLight);
 
-// === 輔助工具 ===
 scene.add(new THREE.GridHelper(10, 10));
 scene.add(new THREE.AxesHelper(2));
 
 // === 載入 GLB 模型 ===
-let arrow; // 宣告箭頭
+let arrow; // 用來儲存箭頭物件
 const loader = new GLTFLoader();
 loader.load('3d/abc.glb', (gltf) => {
-    const model = gltf.scene;
-    scene.add(model);
+  const model = gltf.scene;
+  scene.add(model);
 
-    // 紅色箭頭
-    const from = new THREE.Vector3(0, 0, 0);
-    const dir = new THREE.Vector3(0, 1, 0).normalize();
-    const length = 2;
-    arrow = new THREE.ArrowHelper(dir, from, length, 0xff3333);
-    model.add(arrow);
-    arrow.position.set(0, 0.5, 0);
-});
+  // 紅色箭頭
+  const from = new THREE.Vector3(0, 0, 0);
+  const dir = new THREE.Vector3(0, 1, 0).normalize();
+  const length = 2;
+  arrow = new THREE.ArrowHelper(dir, from, length, 0xff3333);
+  model.add(arrow);
+  arrow.position.set(0, 0.5, 0);
 
-// === Shader 光暈球 ===
-const glowGeo = new THREE.SphereGeometry(0.5, 64, 64);
-const glowMat = new THREE.ShaderMaterial({
-    uniforms: { 
-        glowColor: { value: new THREE.Color(0x00ff00) },
-        radius: { value: 0.5 }
-    },
-    vertexShader: `
-        varying vec3 vPos;
-        void main() {
-            vPos = position;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform vec3 glowColor;
-        uniform float radius;
-        varying vec3 vPos;
-        void main() {
-            float dist = length(vPos);
-            float intensity = 1.0 - smoothstep(0.0, radius, dist);
-            gl_FragColor = vec4(glowColor, intensity);
-        }
-    `,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false
+  // === 在箭頭頂端加光暈 ===
+  const glowGroup = new THREE.Group();
+  const baseRadius = 0.3;
+  for (let i = 0; i < 4; i++) {
+    const geo = new THREE.SphereGeometry(baseRadius, 32, 32);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      transparent: true,
+      opacity: 0.4 / (i + 1),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.setScalar(1 + i * 0.5);
+    glowGroup.add(mesh);
+  }
+  arrow.add(glowGroup);
+  glowGroup.position.set(0, 2, 0);
+  arrow.userData.glowGroup = glowGroup;
 });
-const glow = new THREE.Mesh(glowGeo, glowMat);
-scene.add(glow);
-glow.position.set(2, 1, 0);
 
 // === 動畫 ===
 let pulse = 0;
 function animate() {
-    requestAnimationFrame(animate);
-    pulse += 0.05;
+  requestAnimationFrame(animate);
+  pulse += 0.05;
 
-    // 光球呼吸閃爍
-    const scale = 1 + Math.sin(pulse) * 0.1;
-    glow.scale.setScalar(scale);
-    glow.material.uniforms.glowColor.value.setHSL(0.33, 1.0, 0.5 + 0.2 * Math.sin(pulse));
-
-    // 箭頭前後小幅移動
-    if (arrow) {
-        const amplitude = 0.2;    // 移動距離
-        const speed = 2.0;        // 速度
-        const offset = Math.sin(pulse * speed) * amplitude;
-
-        // 箭頭的方向是Y軸正向，沿著Y軸移動
-        arrow.position.y = 0.5 + offset;
+  // 光暈呼吸效果
+  scene.traverse(obj => {
+    if (obj.userData.glowGroup) {
+      obj.userData.glowGroup.children.forEach((mesh, idx) => {
+        mesh.scale.setScalar((1 + idx * 0.5) * (1 + Math.sin(pulse) / 5));
+        mesh.material.opacity = 0.4 / (idx + 1) + Math.sin(pulse) / 10;
+      });
     }
+  });
 
-    controls.update();
-    renderer.render(scene, camera);
+  // 箭頭沿著 Y 軸方向來回移動
+  if (arrow) {
+    const amplitude = 0.2; // 移動幅度
+    const speed = 2.0;     // 移動速度
+    const offset = Math.sin(pulse * speed) * amplitude;
+    arrow.position.y = 0.5 + offset;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
 }
 animate();
 
 // === 視窗調整 ===
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 </script>
 </body>
