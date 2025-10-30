@@ -119,6 +119,16 @@ function animate() {
         }
     });
 
+ // 箭頭前後小幅移動
+    if (arrow) {
+        const amplitude = 0.2;    // 移動距離
+        const speed = 2.0;        // 速度
+        const offset = Math.sin(pulse * speed) * amplitude;
+
+        // 箭頭的方向是Y軸正向，沿著Y軸移動
+        arrow.position.y = 0.5 + offset;
+    }
+
     controls.update();
     renderer.render(scene, camera);
 }
