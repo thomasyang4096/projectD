@@ -64,6 +64,34 @@ loader.load('3d/abc.glb', (gltf) => {
 
     // 調整箭頭在模型上的位置
     arrow.position.set(1, 0.5, -1);
+
+
+// -------------------------------
+// 在箭頭上方加綠色光源 + 光暈
+// -------------------------------
+const light = new THREE.PointLight(0x00ff00, 1, 5); // 顏色, 強度, 距離
+light.position.set(0, 1.5, 0); // 箭頭上方
+
+// 用半透明球模擬暈光
+const glowGeo = new THREE.SphereGeometry(0.2, 16, 16);
+const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    transparent: true,
+    opacity: 0.5,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+});
+const glow = new THREE.Mesh(glowGeo, glowMat);
+
+// 把光源和光暈加到箭頭上
+arrow.add(light);
+arrow.add(glow);
+glow.position.set(0, 0.2, 0); // 光暈位置微調
+
+
+
+
+
 });
 
 // === 調整視窗大小 ===
