@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Three.js 三層 SVG ImportMap 版</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #111; }
+    #info {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      color: #0f0;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 14px;
+      white-space: pre;
+    }
+  </style>
+
+  <!-- ✅ 設定 importmap 對應 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+<div id="info">Loading...</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
+
+// === 場景 ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+// === 相機 ===
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 5000);
+camera.position.set(500, 500, 500);
+camera.lookAt(0, 0, 0);
+
+// === 渲染器 ===
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// === 控制器 ===
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 0, 0);
+controls.update();
+
+// === 光線 ===
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(300, 500, 300);
+scene.add(dirLight);
+
+// === 輔助線與格線 ===
+scene.add(new THREE.GridHelper(1000, 20, 0x444444, 0x222222));
+scene.add(new THREE.AxesHelper(400));
+
+// === 測試立方體 ===
+const box = new THREE.Mesh(new THREE.BoxGeometry(50,50,50), new THREE.MeshNormalMaterial());
+box.position.set(0,25,0);
+scene.add(box);
+
+// === 三層 SVG 平面 ===
+const floors = [
+  { file: 'floor1.svg', y: 0 },
+  { file: 'floor2.svg', y: 100 },
+  { file: 'floor3.svg', y: 200 }
+];
+
+const loader = new THREE.TextureLoader();
+
+floors.forEach(f => {
+  loader.load(
+    f.file,
+    (texture) => {
+      const mat = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
+        opacity: 0.9
+      });
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(800,800), mat);
+      plane.rotation.x = -Math.PI/2;
+      plane.position.y = f.y;
+      scene.add(plane);
+    },
+    undefined,
+    (err) => console.error('載入 SVG 失敗', f.file, err)
+  );
+});
+
+// === 自動調整 ===
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// === Debug 顯示 ===
+const info = document.getElementById('info');
+function updateInfo() {
+  const p = camera.position;
+  const t = controls.target;
+  info.textContent = `Camera: (${p.x.toFixed(0)}, ${p.y.toFixed(0)}, ${p.z.toFixed(0)})\nTarget: (${t.x.toFixed(0)}, ${t.y.toFixed(0)}, ${t.z.toFixed(0)})`;
+}
+
+// === 主動畫 ===
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  box.rotation.y += 0.01;
+  renderer.render(scene, camera);
+  updateInfo();
+}
+animate();
+</script>
+</body>
+</html>
