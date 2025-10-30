@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>GLB + 箭頭 + 光暈球</title>
+<title>GLB + 箭頭 + 光暈球 + 箭頭動態</title>
 <style> body { margin:0; overflow:hidden; background:#111; } </style>
 
 <script type="importmap">
@@ -45,27 +45,27 @@ scene.add(new THREE.GridHelper(10, 10));
 scene.add(new THREE.AxesHelper(2));
 
 // === 載入 GLB 模型 ===
+let arrow; // 宣告箭頭
 const loader = new GLTFLoader();
 loader.load('3d/abc.glb', (gltf) => {
     const model = gltf.scene;
     scene.add(model);
 
-    // -------------------------------
-    // 加紅色箭頭
-    // -------------------------------
-    const from = new THREE.Vector3(0,0,0);
-    const dir = new THREE.Vector3(0,1,0).normalize();
+    // 紅色箭頭
+    const from = new THREE.Vector3(0, 0, 0);
+    const dir = new THREE.Vector3(0, 1, 0).normalize();
     const length = 2;
-    const color = 0xff0000;
-    const arrow = new THREE.ArrowHelper(dir, from, length, color);
+    arrow = new THREE.ArrowHelper(dir, from, length, 0xff3333);
     model.add(arrow);
-    arrow.position.set(0,0.5,0);
+    arrow.position.set(0, 0.5, 0);
+});
 
-   const glowGeo = new THREE.SphereGeometry(0.5, 64, 64);
+// === Shader 光暈球 ===
+const glowGeo = new THREE.SphereGeometry(0.5, 64, 64);
 const glowMat = new THREE.ShaderMaterial({
     uniforms: { 
         glowColor: { value: new THREE.Color(0x00ff00) },
-        radius: { value: 0.5 } // 球半徑
+        radius: { value: 0.5 }
     },
     vertexShader: `
         varying vec3 vPos;
@@ -88,38 +88,22 @@ const glowMat = new THREE.ShaderMaterial({
     blending: THREE.AdditiveBlending,
     depthWrite: false
 });
-
 const glow = new THREE.Mesh(glowGeo, glowMat);
-arrow.add(glow);
-glow.position.set(0, 2, 0);
+scene.add(glow);
+glow.position.set(2, 1, 0);
 
-
-});
-
-// === 視窗調整 ===
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// === 動畫迴圈 ===
+// === 動畫 ===
 let pulse = 0;
 function animate() {
     requestAnimationFrame(animate);
     pulse += 0.05;
 
-    // 光暈呼吸閃爍
-    scene.traverse(obj => {
-        if(obj.userData.glowGroup){
-            obj.userData.glowGroup.children.forEach((mesh, idx)=>{
-                mesh.scale.setScalar( (1 + idx*0.5) * (1 + Math.sin(pulse)/5) );
-                mesh.material.opacity = 0.4/(idx+1) + Math.sin(pulse)/10;
-            });
-        }
-    });
+    // 光球呼吸閃爍
+    const scale = 1 + Math.sin(pulse) * 0.1;
+    glow.scale.setScalar(scale);
+    glow.material.uniforms.glowColor.value.setHSL(0.33, 1.0, 0.5 + 0.2 * Math.sin(pulse));
 
- // 箭頭前後小幅移動
+    // 箭頭前後小幅移動
     if (arrow) {
         const amplitude = 0.2;    // 移動距離
         const speed = 2.0;        // 速度
@@ -134,6 +118,12 @@ function animate() {
 }
 animate();
 
+// === 視窗調整 ===
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 </body>
 </html>
