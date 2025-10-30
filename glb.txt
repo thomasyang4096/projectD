@@ -89,9 +89,16 @@ function animate() {
   // 光暈呼吸效果
   scene.traverse(obj => {
     if (obj.userData.glowGroup) {
-      obj.userData.glowGroup.children.forEach((mesh, idx) => {
-        mesh.scale.setScalar((1 + idx * 0.5) * (1 + Math.sin(pulse) / 5));
-        mesh.material.opacity = 0.4 / (idx + 1) + Math.sin(pulse) / 10;
+      const group = obj.userData.glowGroup;
+      const breath = 1 + Math.sin(pulse) * 0.15; // scale 變化幅度
+
+      group.children.forEach((mesh, idx) => {
+        // 每層微幅擴張收縮
+        mesh.scale.setScalar((1 + idx * 0.5) * breath);
+
+        // 改用顏色亮度來呈現閃爍
+        const hsl = { h: 0.33, s: 1.0, l: 0.4 + Math.sin(pulse + idx) * 0.2 };
+        mesh.material.color.setHSL(hsl.h, hsl.s, hsl.l);
       });
     }
   });
