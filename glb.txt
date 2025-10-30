@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <title>GLB + 紅色箭頭範例</title>
-  <style> body { margin:0; overflow:hidden; background:#111; } </style>
+<meta charset="UTF-8">
+<title>GLB + 箭頭 + 綠色光暈 Sprite</title>
+<style> body { margin:0; overflow:hidden; background:#111; } </style>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
   }
-  </script>
+}
+</script>
 </head>
 <body>
 <script type="module">
@@ -51,58 +51,37 @@ loader.load('3d/abc.glb', (gltf) => {
     scene.add(model);
 
     // -------------------------------
-    // 在模型局部座標加紅色箭頭
+    // 加紅色箭頭
     // -------------------------------
-    const from = new THREE.Vector3(0, 0, 0);        // 箭頭起點
-    const dir = new THREE.Vector3(0, 1, 0).normalize();  // 箭頭方向
-    const length = 2;                               // 箭頭長度
-    const color = 0xff0000;                         // 紅色
+    const from = new THREE.Vector3(0,0,0);
+    const dir = new THREE.Vector3(0,1,0).normalize();
+    const length = 2;
+    const color = 0xff0000;
     const arrow = new THREE.ArrowHelper(dir, from, length, color);
-
-    // 把箭頭加入模型，隨模型移動
     model.add(arrow);
-
-    // 調整箭頭在模型上的位置
-    arrow.position.set(1, 0.5, -1);
-
+    arrow.position.set(0,0.5,0);
 
     // -------------------------------
-    // 在箭頭上加光暈球 (Shader)
+    // 在箭頭頂端加綠色光暈 Sprite
     // -------------------------------
-    const glowGeo = new THREE.SphereGeometry(0.3, 32, 32);
-    const glowMat = new THREE.ShaderMaterial({
-        uniforms: { glowColor: { value: new THREE.Color(0x00ff00) } },
-        vertexShader: `
-            varying vec3 vPos;
-            void main() {
-                vPos = position;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 glowColor;
-            varying vec3 vPos;
-            void main() {
-                float intensity = 1.0 - length(vPos) / 0.3; // 球心亮, 外圍淡
-                intensity = clamp(intensity, 0.0, 1.0);
-                gl_FragColor = vec4(glowColor, intensity);
-            }
-        `,
+    const texture = new THREE.TextureLoader().load('glow.png'); // 中心亮綠 → 外圍透明的 PNG
+    const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        color: 0x00ff00,
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
-    const glow = new THREE.Mesh(glowGeo, glowMat);
-    arrow.add(glow);
-    glow.position.set(0, 2, 0); // 箭頭頂端
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(1.5, 1.5, 1.5);   // 光暈大小
+    sprite.position.set(0, 2, 0);       // 箭頭頂端
+    arrow.add(sprite);
 
-
-
-
-
+    // 保存引用到 animate() 裡控制呼吸效果
+    arrow.userData.glowSprite = sprite;
 });
 
-// === 調整視窗大小 ===
+// === 視窗調整 ===
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -110,8 +89,19 @@ window.addEventListener('resize', () => {
 });
 
 // === 動畫迴圈 ===
+let pulse = 0;
 function animate() {
     requestAnimationFrame(animate);
+    pulse += 0.05;
+
+    // 控制光暈呼吸
+    scene.traverse(obj => {
+        if(obj.userData.glowSprite){
+            obj.userData.glowSprite.scale.setScalar(1.5 + Math.sin(pulse)*0.3);
+            obj.userData.glowSprite.material.opacity = 0.7 + Math.sin(pulse)*0.3;
+        }
+    });
+
     controls.update();
     renderer.render(scene, camera);
 }
