@@ -61,27 +61,39 @@ loader.load('3d/abc.glb', (gltf) => {
     model.add(arrow);
     arrow.position.set(0,0.5,0);
 
-    // -------------------------------
-    // 在箭頭頂端加光暈球 (多層半透明球)
-    // -------------------------------
-    const glowGroup = new THREE.Group();
-    const baseRadius = 0.3;
-    for(let i=0; i<4; i++){
-        const geo = new THREE.SphereGeometry(baseRadius, 32, 32);
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.4 / (i+1),
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.scale.setScalar(1 + i*0.5);
-        glowGroup.add(mesh);
-    }
-    arrow.add(glowGroup);
-    glowGroup.position.set(0, 2, 0);
-    arrow.userData.glowGroup = glowGroup;
+   const glowGeo = new THREE.SphereGeometry(0.5, 64, 64);
+const glowMat = new THREE.ShaderMaterial({
+    uniforms: { 
+        glowColor: { value: new THREE.Color(0x00ff00) },
+        radius: { value: 0.5 } // 球半徑
+    },
+    vertexShader: `
+        varying vec3 vPos;
+        void main() {
+            vPos = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform vec3 glowColor;
+        uniform float radius;
+        varying vec3 vPos;
+        void main() {
+            float dist = length(vPos);
+            float intensity = 1.0 - smoothstep(0.0, radius, dist);
+            gl_FragColor = vec4(glowColor, intensity);
+        }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+});
+
+const glow = new THREE.Mesh(glowGeo, glowMat);
+arrow.add(glow);
+glow.position.set(0, 2, 0);
+
+
 });
 
 // === 視窗調整 ===
