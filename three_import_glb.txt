@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>匯入 GLB 模型</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #111; }
+  </style>
+
+  <!-- 匯入對應表 (importmap) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/loaders/GLTFLoader.js';  // ✅ 新增這行
+
+// === 場景 ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+// === 相機 ===
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 5000);
+camera.position.set(3, 2, 5); // 根據模型大小可再調整
+camera.lookAt(0, 0, 0);
+
+// === 渲染器 ===
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// === 控制器 ===
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 1, 0);
+
+// === 光源 ===
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+
+// === 輔助工具 (可選) ===
+scene.add(new THREE.GridHelper(10, 10));
+scene.add(new THREE.AxesHelper(2));
+
+// === 匯入 GLB 模型 ===
+const loader = new GLTFLoader();
+loader.load(
+  'abc.glb', // ✅ 你的模型檔案名稱
+  (gltf) => {
+    const model = gltf.scene;
+    model.scale.set(1, 1, 1);      // 可改大小
+    model.position.set(0, 0, 0);   // 可改位置
+    scene.add(model);
+    console.log('模型載入成功:', model);
+  },
+  (xhr) => {
+    console.log((xhr.loaded / xhr.total * 100).toFixed(1) + '% 載入中');
+  },
+  (error) => {
+    console.error('模型載入失敗:', error);
+  }
+);
+
+// === 自動調整 ===
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// === 動畫 ===
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
