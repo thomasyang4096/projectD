@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>GLB + 紅色箭頭範例</title>
+  <style> body { margin:0; overflow:hidden; background:#111; } </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/loaders/GLTFLoader.js';
+
+// === 場景、相機、渲染器 ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 5000);
+camera.position.set(5, 5, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// === 控制器 ===
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// === 光源 ===
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(10, 10, 10);
+scene.add(dirLight);
+
+// === 輔助工具 ===
+scene.add(new THREE.GridHelper(10, 10));
+scene.add(new THREE.AxesHelper(2));
+
+// === 載入 GLB 模型 ===
+const loader = new GLTFLoader();
+loader.load('3d/abc.glb', (gltf) => {
+    const model = gltf.scene;
+    scene.add(model);
+
+    // -------------------------------
+    // 在模型局部座標加紅色箭頭
+    // -------------------------------
+    const from = new THREE.Vector3(0, 0, 0);        // 箭頭起點
+    const dir = new THREE.Vector3(0, 1, 0).normalize();  // 箭頭方向
+    const length = 2;                               // 箭頭長度
+    const color = 0xff0000;                         // 紅色
+    const arrow = new THREE.ArrowHelper(dir, from, length, color);
+
+    // 把箭頭加入模型，隨模型移動
+    model.add(arrow);
+
+    // 調整箭頭在模型上的位置
+    arrow.position.set(1, 0.5, -1);
+});
+
+// === 調整視窗大小 ===
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// === 動畫迴圈 ===
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
