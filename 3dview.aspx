@@ -79,18 +79,18 @@
         return group;
     }
 
-    // === 建立箭頭 ===
+// === 建立箭頭 ===
     const arrows = [];
     for (const data of arrowData) {
         const dir = new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z).normalize();
         const pos = new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z);
         const arrow = new THREE.ArrowHelper(dir, pos, data.len, data.color);
-        arrow.userData.url = data.url;
-
-        const glow = createGlowGroup(data.color);
-        arrow.add(glow);
-        glow.position.copy(dir.clone().multiplyScalar(data.len));
-
+        arrow.userData = {
+            url: data.url,
+            basePos: pos.clone(),
+            dir: dir.clone(),
+            phase: Math.random() * Math.PI * 2
+        };
         scene.add(arrow);
         arrows.push(arrow);
     }
