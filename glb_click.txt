@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>可點擊箭頭範例</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #111; }
+  canvas { cursor: pointer; }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/loaders/GLTFLoader.js';
+
+// === 場景、相機、渲染器 ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 5000);
+camera.position.set(8, 8, 8);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// === 光源 ===
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(10, 10, 10);
+scene.add(dirLight);
+
+// === 地面、輔助線 ===
+scene.add(new THREE.GridHelper(10, 10));
+scene.add(new THREE.AxesHelper(2));
+
+// === 載入 GLB 模型 ===
+const loader = new GLTFLoader();
+loader.load('3d/abc.glb', (gltf) => {
+  const model = gltf.scene;
+  scene.add(model);
+});
+
+// === 建立多個箭頭（每個都有 glowGroup 與 URL）===
+const arrows = [];
+const arrowData = [
+  { pos: new THREE.Vector3(0, 0.5, 0), url: 'https://example.com/a' },
+  { pos: new THREE.Vector3(2, 0.5, 2), url: 'https://example.com/b' },
+  { pos: new THREE.Vector3(-2, 0.5, -1), url: 'https://example.com/c' }
+];
+
+for (const data of arrowData) {
+  const dir = new THREE.Vector3(0, 1, 0);
+  const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(0, 0, 0), 2, 0xff3333);
+  arrow.position.copy(data.pos);
+  arrow.userData.url = data.url;
+  arrow.userData.glowGroup = createGlowGroup();
+  arrow.add(arrow.userData.glowGroup);
+  arrow.userData.glowGroup.position.set(0, 2, 0);
+  scene.add(arrow);
+  arrows.push(arrow);
+}
+
+// === 建立光暈群組 ===
+function createGlowGroup() {
+  const group = new THREE.Group();
+  const baseRadius = 0.3;
+  for (let i = 0; i < 4; i++) {
+    const geo = new THREE.SphereGeometry(baseRadius, 32, 32);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      transparent: true,
+      opacity: 0.4 / (i + 1),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.setScalar(1 + i * 0.5);
+    group.add(mesh);
+  }
+  return group;
+}
+
+// === 滑鼠點擊偵測 ===
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('click', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  if (intersects.length > 0) {
+    const hit = intersects[0].object;
+
+    // 往上找是哪個箭頭被點擊
+    let target = hit;
+    while (target && !target.userData.url) {
+      target = target.parent;
+    }
+    if (target && target.userData.url) {
+      window.open(target.userData.url, '_blank');
+    }
+  }
+});
+
+// === 動畫 ===
+let pulse = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  pulse += 0.05;
+
+  // 光暈呼吸閃爍 + 箭頭上下浮動
+  arrows.forEach(arrow => {
+    const glowGroup = arrow.userData.glowGroup;
+    const breath = 1 + Math.sin(pulse) * 0.15;
+
+    glowGroup.children.forEach((mesh, idx) => {
+      mesh.scale.setScalar((1 + idx * 0.5) * breath);
+      const hsl = { h: 0.33, s: 1.0, l: 0.4 + Math.sin(pulse + idx) * 0.2 };
+      mesh.material.color.setHSL(hsl.h, hsl.s, hsl.l);
+    });
+
+    // 箭頭輕微上下移動
+    arrow.position.y = 0.5 + Math.sin(pulse * 2) * 0.2;
+  });
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// === 視窗調整 ===
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
