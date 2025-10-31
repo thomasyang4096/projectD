@@ -4,10 +4,8 @@ Partial Class three3dview
     Inherits System.Web.UI.Page
 
     Public ArrowJson As String
-    Public GlowBallJson As String
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
-        ' 模擬從資料庫或邏輯取得資料
         Dim arrows = New List(Of Object) From {
             New With {.pos = New With {.x = 0, .y = 0.5, .z = 0},
                       .dir = New With {.x = 0, .y = 1, .z = 0},
@@ -26,14 +24,7 @@ Partial Class three3dview
                       .url = "https://example.com/c"}
         }
 
-        Dim glowBalls = New List(Of Object) From {
-            New With {.pos = New With {.x = 2, .y = 1, .z = -1},
-                      .color = &H00FF88,
-                      .url = "https://example.com/light1"}
-        }
-
         Dim js As New JavaScriptSerializer()
         ArrowJson = js.Serialize(arrows)
-        GlowBallJson = js.Serialize(glowBalls)
     End Sub
 End Class
