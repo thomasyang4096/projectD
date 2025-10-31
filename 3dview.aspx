@@ -78,39 +78,37 @@
         }
         return group;
     }
-
-function createCustomArrow(dir, pos, length, color, radius = 0.05) {
+function createCustomArrow(dir, pos, length, color, radius = 0.05, scale = 1) {
     const group = new THREE.Group();
 
-    // === 箭桿 ===
     const shaftGeo = new THREE.CylinderGeometry(radius, radius, length * 0.8, 8);
     const shaftMat = new THREE.MeshBasicMaterial({ color });
     const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-    shaft.position.y = length * 0.4; // 中心往上偏
+    shaft.position.y = length * 0.4;
     group.add(shaft);
 
-    // === 箭頭錐 ===
     const coneGeo = new THREE.ConeGeometry(radius * 3, length * 0.2, 12);
     const coneMat = new THREE.MeshBasicMaterial({ color });
     const cone = new THREE.Mesh(coneGeo, coneMat);
-    cone.position.y = length * 0.9; // 錐尖放最上面
+    cone.position.y = length * 0.9;
     group.add(cone);
 
-    // === 方向與位置 ===
     const axis = new THREE.Vector3(0, 1, 0);
     const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, dir.clone().normalize());
     group.quaternion.copy(quaternion);
     group.position.copy(pos);
 
+    // 🟢 新增：整體縮放
+    group.scale.set(scale, scale, scale);
+
     return group;
 }
-
 // === 建立箭頭 ===
 const arrows = [];
 for (const data of arrowData) {
     const dir = new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z).normalize();
     const pos = new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z);
-    const arrow = createCustomArrow(dir, pos, data.len, data.color, 0.1); // ← 這裡 radius 控線寬
+   const arrow = createCustomArrow(dir, pos, data.len, data.color, 0.1, 1.5); // ← 這裡 radius 控線寬
     arrow.userData = {
         url: data.url,
         basePos: pos.clone(),
