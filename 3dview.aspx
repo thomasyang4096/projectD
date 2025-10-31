@@ -142,6 +142,19 @@
                 ball.children[i].scale.setScalar((1 + i * 0.2) * scale);
             }
         });
+
+       // 箭頭前後擺動
+        arrows.forEach(arrow => {
+            const phase = arrow.userData.phase;
+            const amplitude = 0.4; // 擺動距離
+            const offset = Math.sin(t + phase) * amplitude;
+
+            const newPos = arrow.userData.basePos.clone()
+                .add(arrow.userData.dir.clone().multiplyScalar(offset));
+
+            arrow.position.copy(newPos);
+        });
+
         controls.update();
         renderer.render(scene, camera);
     }
