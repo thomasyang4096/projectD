@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>Three.js 多箭頭互動範例</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #111; }
+  canvas { cursor: pointer; }
+</style>
+
+<!-- ImportMap for module-style imports -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/loaders/GLTFLoader.js';
+
+// === 場景、相機、渲染器 ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+camera.position.set(8, 8, 8);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// === 光源 ===
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(10, 10, 10);
+scene.add(dirLight);
+
+// === 地面與輔助線 ===
+scene.add(new THREE.GridHelper(10, 10));
+scene.add(new THREE.AxesHelper(2));
+
+// === 載入 GLB 模型 ===
+const loader = new GLTFLoader();
+loader.load('3d/abc.glb', (gltf) => {
+  const model = gltf.scene;
+  scene.add(model);
+});
+
+// === 建立 Glow 群組 ===
+function createGlowGroup(color = 0x00ff00) {
+  const group = new THREE.Group();
+  const baseRadius = 0.3;
+  for (let i = 0; i < 4; i++) {
+    const geo = new THREE.SphereGeometry(baseRadius, 32, 32);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.4 / (i + 1),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.setScalar(1 + i * 0.5);
+    group.add(mesh);
+  }
+  return group;
+}
+
+// === 建立箭頭 ===
+const arrows = [];
+const arrowData = [
+  {
+    pos: new THREE.Vector3(0, 0.5, 0),
+    dir: new THREE.Vector3(0, 1, 0),  // 向上
+    len: 2,
+    color: 0xff3333,
+    url: 'https://example.com/a'
+  },
+  {
+    pos: new THREE.Vector3(3, 0.5, 1),
+    dir: new THREE.Vector3(1, 0, 0),  // 向右
+    len: 2.5,
+    color: 0x33ff33,
+    url: 'https://example.com/b'
+  },
+  {
+    pos: new THREE.Vector3(-2, 0.5, -3),
+    dir: new THREE.Vector3(0, 0, -1), // 向前
+    len: 1.5,
+    color: 0x3333ff,
+    url: 'https://example.com/c'
+  }
+];
+
+for (const data of arrowData) {
+  const dir = data.dir.clone().normalize();
+  const arrow = new THREE.ArrowHelper(dir, data.pos, data.len, data.color);
+
+  arrow.userData.url = data.url;
+  arrow.userData.glowGroup = createGlowGroup(data.color);
+  arrow.add(arrow.userData.glowGroup);
+  arrow.userData.glowGroup.position.copy(dir.clone().multiplyScalar(data.len));
+  
+  scene.add(arrow);
+  arrows.push(arrow);
+}
+
+// === 光球（可選功能示範）===
+const glowBalls = [];
+function createGlowBall(position, color = 0x00ff88, url = null) {
+  const group = new THREE.Group();
+  group.position.copy(position);
+  group.userData.url = url;
+  group.userData.isGlowBall = true;
+
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 32, 32),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  group.add(core);
+
+  for (let i = 0; i < 4; i++) {
+    const geo = new THREE.SphereGeometry(0.3 + i * 0.2, 32, 32);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.3 / (i + 1),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const halo = new THREE.Mesh(geo, mat);
+    group.add(halo);
+  }
+
+  scene.add(group);
+  glowBalls.push(group);
+  return group;
+}
+createGlowBall(new THREE.Vector3(2, 1, -1), 0x00ff88, 'https://example.com/light1');
+
+// === 滑鼠互動偵測 (Hover + Click + Pulse) ===
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let hoveredObject = null;
+let hoverPulse = 0;
+let hoverAnimating = false;
+
+window.addEventListener('mousemove', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  let hitObj = null;
+
+  if (intersects.length > 0) {
+    let hit = intersects[0].object;
+    while (hit && !hit.userData.url) hit = hit.parent;
+    if (hit && hit.userData.isGlowBall) hitObj = hit;
+  }
+
+  if (hitObj !== hoveredObject) {
+    if (hoveredObject) { // reset previous
+      hoveredObject.scale.set(1, 1, 1);
+      hoveredObject.children[0].material.color.set(hoveredObject.userData.originalColor);
+      hoverAnimating = false;
+    }
+
+    if (hitObj) {
+      hoveredObject = hitObj;
+      hitObj.userData.originalColor = hitObj.children[0].material.color.getHex();
+      hoverPulse = 0;
+      hoverAnimating = true;
+    } else {
+      hoveredObject = null;
+    }
+  }
+});
+
+window.addEventListener('click', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  if (intersects.length > 0) {
+    let target = intersects[0].object;
+    while (target && !target.userData.url) target = target.parent;
+    if (target && target.userData.url) window.open(target.userData.url, '_blank');
+  }
+});
+
+// === 動畫 ===
+let pulse = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  pulse += 0.05;
+
+  // 箭頭 glow 呼吸 + 浮動
+  arrows.forEach(arrow => {
+    const glowGroup = arrow.userData.glowGroup;
+    const breath = 1 + Math.sin(pulse) * 0.15;
+    glowGroup.children.forEach((mesh, idx) => {
+      mesh.scale.setScalar((1 + idx * 0.5) * breath);
+    });
+    arrow.position.y = 0.5 + Math.sin(pulse * 2) * 0.1;
+  });
+
+  // 光球呼吸光暈
+  glowBalls.forEach(ball => {
+    const t = Math.sin(pulse * 1.5);
+    const scale = 1 + t * 0.1;
+    for (let i = 1; i < ball.children.length; i++) {
+      ball.children[i].scale.setScalar((1 + i * 0.2) * scale);
+    }
+  });
+
+  // Hover 能量脈衝
+  if (hoverAnimating && hoveredObject) {
+    hoverPulse += 0.15;
+    const scale = 1 + Math.sin(hoverPulse) * 0.25;
+    hoveredObject.scale.set(scale, scale, scale);
+    const core = hoveredObject.children[0];
+    const hsl = { h: 0.33, s: 1.0, l: 0.5 + Math.abs(Math.sin(hoverPulse)) * 0.3 };
+    core.material.color.setHSL(hsl.h, hsl.s, hsl.l);
+    if (hoverPulse > Math.PI) {
+      hoverAnimating = false;
+      hoveredObject.scale.set(1, 1, 1);
+      core.material.color.set(hoveredObject.userData.originalColor);
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// === 視窗調整 ===
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
