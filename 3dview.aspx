@@ -4,7 +4,7 @@
 <html lang="zh-TW">
 <head runat="server">
     <meta charset="UTF-8" />
-    <title>Three.js 多箭頭互動範例</title>
+    <title>Three.js 活動箭頭 + 能量脈衝</title>
     <style>
         body { margin: 0; overflow: hidden; background: #111; }
         canvas { cursor: pointer; }
@@ -23,10 +23,8 @@
 <body>
     <form id="form1" runat="server"></form>
 
-    <!-- 後端注入的 JSON 資料 -->
     <script>
-      const arrowData = <%= ArrowJson %>;
-      const glowBallData = <%= GlowBallJson %>;
+        const arrowData = <%= ArrowJson %>;
     </script>
 
     <script type="module">
@@ -47,135 +45,155 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    // === 光源 ===
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(10, 10, 10);
-    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(10, 10, 10);
+    scene.add(light);
 
-    // === GLB 模型 ===
+    scene.add(new THREE.GridHelper(10, 10));
+    scene.add(new THREE.AxesHelper(2));
+
+    // === 載入 GLB 模型 ===
     const loader = new GLTFLoader();
-    loader.load('3d/abc.glb', (gltf) => {
-        scene.add(gltf.scene);
-    });
+    loader.load('3d/abc.glb', (gltf) => scene.add(gltf.scene));
 
-    // === 建立 Glow 群組 ===
-    function createGlowGroup(color = 0x00ff00) {
+    // === 建立自訂箭頭 ===
+    function createCustomArrow(dir, pos, length, color, radius = 0.05, scale = 1) {
         const group = new THREE.Group();
-        const baseRadius = 0.3;
-        for (let i = 0; i < 4; i++) {
-            const geo = new THREE.SphereGeometry(baseRadius, 32, 32);
-            const mat = new THREE.MeshBasicMaterial({
-                color,
-                transparent: true,
-                opacity: 0.4 / (i + 1),
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.scale.setScalar(1 + i * 0.5);
-            group.add(mesh);
-        }
+
+        // 箭桿
+        const shaftGeo = new THREE.CylinderGeometry(radius, radius, length * 0.8, 8);
+        const shaftMat = new THREE.MeshBasicMaterial({ color });
+        const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+        shaft.position.y = length * 0.4;
+        shaft.userData.isHighlightable = true;
+        group.add(shaft);
+
+        // 箭頭錐
+        const coneGeo = new THREE.ConeGeometry(radius * 1.8, length * 0.35, 16); // 可調尖度
+        const coneMat = new THREE.MeshBasicMaterial({ color });
+        const cone = new THREE.Mesh(coneGeo, coneMat);
+        cone.position.y = length * 0.9;
+        cone.userData.isHighlightable = true;
+        group.add(cone);
+
+        // 方向
+        const axis = new THREE.Vector3(0, 1, 0);
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, dir.clone().normalize());
+        group.quaternion.copy(quaternion);
+        group.position.copy(pos);
+
+        group.scale.set(scale, scale, scale);
+
         return group;
     }
-function createCustomArrow(dir, pos, length, color, radius = 0.05, scale = 1) {
-    const group = new THREE.Group();
 
-    const shaftGeo = new THREE.CylinderGeometry(radius, radius, length * 0.8, 8);
-    const shaftMat = new THREE.MeshBasicMaterial({ color });
-    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-    shaft.position.y = length * 0.4;
-    group.add(shaft);
+    // === 建立箭頭列表 ===
+    const arrows = [];
+    for (const data of arrowData) {
+        const dir = new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z).normalize();
+        const pos = new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z);
+        const arrow = createCustomArrow(dir, pos, data.len, data.color, 0.1, 1);
+        arrow.userData = {
+            url: data.url,
+            basePos: pos.clone(),
+            dir: dir.clone(),
+            phase: Math.random() * Math.PI * 2
+        };
+        scene.add(arrow);
+        arrows.push(arrow);
+    }
 
-    const coneGeo = new THREE.ConeGeometry(radius * 3, length * 0.2, 12);
-    const coneMat = new THREE.MeshBasicMaterial({ color });
-    const cone = new THREE.Mesh(coneGeo, coneMat);
-    cone.position.y = length * 0.9;
-    group.add(cone);
+    // === Raycaster 滑鼠互動 ===
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let lastHovered = null;
 
-    const axis = new THREE.Vector3(0, 1, 0);
-    const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, dir.clone().normalize());
-    group.quaternion.copy(quaternion);
-    group.position.copy(pos);
+    window.addEventListener('mousemove', (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // 🟢 新增：整體縮放
-    group.scale.set(scale, scale, scale);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children, true);
 
-    return group;
-}
-// === 建立箭頭 ===
-const arrows = [];
-for (const data of arrowData) {
-    const dir = new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z).normalize();
-    const pos = new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z);
-   const arrow = createCustomArrow(dir, pos, data.len, data.color, 0.1, 1.5); // ← 這裡 radius 控線寬
-    arrow.userData = {
-        url: data.url,
-        basePos: pos.clone(),
-        dir: dir.clone(),
-        phase: Math.random() * Math.PI * 2
-    };
-    scene.add(arrow);
-    arrows.push(arrow);
-}
+        if (intersects.length > 0) {
+            let obj = intersects[0].object;
+            while (obj && !obj.userData.isHighlightable) obj = obj.parent;
 
-    // === 光球 ===
-    const glowBalls = [];
-    for (const g of glowBallData) {
-        const group = new THREE.Group();
-        group.position.set(g.pos.x, g.pos.y, g.pos.z);
-        group.userData.url = g.url;
+            if (obj && obj !== lastHovered) {
+                // 滑鼠移上去 → 閃亮 + 能量脈衝
+                const worldPos = new THREE.Vector3();
+                obj.getWorldPosition(worldPos);
+                createEnergyPulse(worldPos, 0x00ff88);
 
-        const color = new THREE.Color(g.color);
-        const core = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32),
-            new THREE.MeshBasicMaterial({ color }));
-        group.add(core);
-
-        for (let i = 0; i < 4; i++) {
-            const geo = new THREE.SphereGeometry(0.3 + i * 0.2, 32, 32);
-            const mat = new THREE.MeshBasicMaterial({
-                color,
-                transparent: true,
-                opacity: 0.3 / (i + 1),
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-            const halo = new THREE.Mesh(geo, mat);
-            group.add(halo);
+                if (obj.material && obj.material.color) {
+                    const originalColor = obj.material.color.getHex();
+                    obj.material.color.setHex(0x00ff99);
+                    setTimeout(() => obj.material.color.setHex(originalColor), 200);
+                }
+                lastHovered = obj;
+            }
+        } else {
+            lastHovered = null;
         }
-        scene.add(group);
-        glowBalls.push(group);
+    });
+
+    // === 點擊開啟連結 ===
+    window.addEventListener('click', (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children, true);
+        if (intersects.length > 0) {
+            let obj = intersects[0].object;
+            while (obj && !obj.userData.url) obj = obj.parent;
+            if (obj && obj.userData.url) window.open(obj.userData.url, '_blank');
+        }
+    });
+
+    // === 能量脈衝函式 ===
+    function createEnergyPulse(position, color = 0x00ffcc) {
+        const geo = new THREE.SphereGeometry(0.5, 32, 32);
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+        });
+        const pulse = new THREE.Mesh(geo, mat);
+        pulse.position.copy(position);
+        scene.add(pulse);
+
+        const start = performance.now();
+        const duration = 600;
+        const animatePulse = () => {
+            const elapsed = performance.now() - start;
+            const progress = elapsed / duration;
+            const scale = 1 + progress * 2.5;
+            pulse.scale.set(scale, scale, scale);
+            pulse.material.opacity = 0.5 * (1 - progress);
+            if (progress < 1) requestAnimationFrame(animatePulse);
+            else {
+                scene.remove(pulse);
+                pulse.geometry.dispose();
+                pulse.material.dispose();
+            }
+        };
+        animatePulse();
     }
 
     // === 動畫 ===
-    let pulse = 0;
+    let t = 0;
     function animate() {
         requestAnimationFrame(animate);
-        pulse += 0.05;
-        arrows.forEach(arrow => {
-            const glow = arrow.children[0];
-            const breath = 1 + Math.sin(pulse) * 0.15;
-            glow.children.forEach((m, i) => {
-                m.scale.setScalar((1 + i * 0.5) * breath);
-            });
-        });
-        glowBalls.forEach(ball => {
-            const t = Math.sin(pulse * 1.5);
-            const scale = 1 + t * 0.1;
-            for (let i = 1; i < ball.children.length; i++) {
-                ball.children[i].scale.setScalar((1 + i * 0.2) * scale);
-            }
-        });
+        t += 0.05;
 
-       // 箭頭前後擺動
+        // 箭頭呼吸移動
         arrows.forEach(arrow => {
-            const phase = arrow.userData.phase;
-            const amplitude = 0.4; // 擺動距離
-            const offset = Math.sin(t + phase) * amplitude;
-
+            const amplitude = 0.4;
+            const offset = Math.sin(t + arrow.userData.phase) * amplitude;
             const newPos = arrow.userData.basePos.clone()
                 .add(arrow.userData.dir.clone().multiplyScalar(offset));
-
             arrow.position.copy(newPos);
         });
 
