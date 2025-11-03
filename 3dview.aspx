@@ -151,38 +151,31 @@
         arrows.push(arrow);
     }
 
-    // === Raycaster 滑鼠互動 ===
+     // === 滑鼠偵測 + Tooltip ===
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    let lastHovered = null;
+    const tooltip = document.getElementById("tooltip");
 
     window.addEventListener('mousemove', (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(scene.children, true);
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(interactables, false);
 
-        if (intersects.length > 0) {
-            let obj = intersects[0].object;
-            while (obj && !obj.userData.isHighlightable) obj = obj.parent;
+      if (hits.length > 0) {
+        const hit = hits[0].object;
+        tooltip.innerText = hit.userData.tooltip;
+        tooltip.style.left = `${event.clientX + 10}px`;
+        tooltip.style.top = `${event.clientY + 10}px`;
+        tooltip.style.display = 'block';
+        tooltip.style.opacity = 1;
 
-            if (obj && obj !== lastHovered) {
-                // 滑鼠移上去 → 閃亮 + 能量脈衝
-                const worldPos = new THREE.Vector3();
-                obj.getWorldPosition(worldPos);
-                createEnergyPulse(worldPos, 0x00ff88);
-
-                if (obj.material && obj.material.color) {
-                    const originalColor = obj.material.color.getHex();
-                    obj.material.color.setHex(0x00ff99);
-                    setTimeout(() => obj.material.color.setHex(originalColor), 200);
-                }
-                lastHovered = obj;
-            }
-        } else {
-            lastHovered = null;
-        }
+        // 可選：hover 亮一下
+        if (hit.material) hit.material.emissive = new THREE.Color(0x00ff00);
+      } else {
+        tooltip.style.display = 'none';
+      }
     });
 
     // === 點擊開啟連結 ===
