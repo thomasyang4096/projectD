@@ -25,6 +25,25 @@ Partial Class three3dview
                       .url = "https://example.com/c"}
         }
 
+ ' === 模擬三個光球 + 三個箭頭 ===
+        For i As Integer = 1 To 3
+            objs.Add(New With {
+                .name = $"Arrow {i}",
+                .type = "arrow",
+                .tooltip = $"這是第 {i} 個箭頭",
+                .pos = New With {.x = i * 3, .y = 1.5, .z = 0},
+                .dir = New With {.x = 0, .y = 0, .z = 1}
+            })
+
+            objs.Add(New With {
+                .name = $"Light {i}",
+                .type = "light",
+                .tooltip = $"這是第 {i} 顆光球",
+                .pos = New With {.x = i * 3, .y = 2, .z = -2}
+            })
+        Next
+                                            
+
                                             ' === 建立文字標籤資料 ===
         Dim labels As New List(Of Object)
 
