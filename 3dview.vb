@@ -4,6 +4,7 @@ Partial Class three3dview
     Inherits System.Web.UI.Page
 
     Public ArrowJson As String
+    Public LabelJson As String
 
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
         Dim arrows = New List(Of Object) From {
