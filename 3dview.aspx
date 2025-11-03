@@ -1,266 +1,162 @@
-<%@ Page Language="VB" AutoEventWireup="false" CodeFile="3dview.aspx.vb" Inherits="three3dview" %>
-
+<%@ Page Language="VB" AutoEventWireup="false" CodeFile="3dview.vb" Inherits="three3dview" %>
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head runat="server">
-    <meta charset="UTF-8" />
-    <title>Three.js 活動箭頭 + 能量脈衝</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #111; }
-        canvas { cursor: pointer; }
-  /* Tooltip 外觀 */
-    #tooltip {
-      position: absolute;
-      background: rgba(0,0,0,0.7);
-      color: #0f0;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-family: "Microsoft JhengHei", sans-serif;
-      font-size: 14px;
-      pointer-events: none;
-      white-space: nowrap;
-      display: none;
-      transition: opacity 0.2s ease;
-    }
-    </style>
-
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-      }
-    }
-    </script>
+<head>
+<meta charset="utf-8" />
+<title>3D 箭頭與光球 + Tooltip</title>
+<style>
+body { margin: 0; overflow: hidden; background: #111; }
+#tooltip {
+  position: absolute;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.7);
+  color: #0f0;
+  border-radius: 6px;
+  font-family: "Microsoft JhengHei";
+  font-size: 14px;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+}
+</style>
 </head>
-
 <body>
-    <form id="form1" runat="server"></form>
- <div id="tooltip"></div>
-    <script>
-     //   const arrowData = <%= ArrowJson %>;
-    // ====== 從 VB 傳入資料 ======
-    const arrowData = <%= ArrowJson %>;
-    const labelData = <%= LabelJson %>;
-    </script>
+<div id="tooltip"></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
-    <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/examples/controls/OrbitControls.js';
-    import { GLTFLoader } from 'three/examples/loaders/GLTFLoader.js';
+// 從 VB.NET 傳入的資料
+const data = <%= ObjectJson %>;
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111111);
+// === 場景與相機 ===
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(10, 8, 10);
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-    camera.position.set(8, 8, 8);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 10, 10);
-    scene.add(light);
+// === Raycaster 與互動物件收集 ===
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const interactables = [];
+const tooltip = document.getElementById('tooltip');
 
-    scene.add(new THREE.GridHelper(10, 10));
-    scene.add(new THREE.AxesHelper(2));
+// === 自訂箭頭工廠 ===
+function createArrow(position, direction, color, tooltipText) {
+    const group = new THREE.Group();
 
-    // === 載入 GLB 模型 ===
-    const loader = new GLTFLoader();
-    loader.load('3d/abc.glb', (gltf) => scene.add(gltf.scene));
+    const shaftGeo = new THREE.CylinderGeometry(0.05, 0.05, 1, 12);
+    const shaftMat = new THREE.MeshBasicMaterial({ color });
+    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+    shaft.position.y = 0.5;
+    group.add(shaft);
 
-    // === 支援換行的 createTextLabel ===
-    function createTextLabel(text, color = '#ffffff', fontSize = 48, maxWidth = 512) {
-      const lines = text.split('\n'); // 支援 VB vbLf 換行
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      ctx.font = `${fontSize}px Arial`;
+    const coneGeo = new THREE.ConeGeometry(0.12, 0.25, 16);
+    const coneMat = new THREE.MeshBasicMaterial({ color });
+    const cone = new THREE.Mesh(coneGeo, coneMat);
+    cone.position.y = 1.15;
+    group.add(cone);
 
-      let textWidth = 0;
-      for (const line of lines)
-        textWidth = Math.max(textWidth, ctx.measureText(line).width);
+    const axis = new THREE.Vector3(0, 1, 0);
+    const targetDir = direction.clone().normalize();
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, targetDir);
+    group.quaternion.copy(quaternion);
 
-      const lineHeight = fontSize * 1.2;
-      canvas.width = Math.min(textWidth + 40, maxWidth);
-      canvas.height = lineHeight * lines.length + 40;
+    group.position.copy(position);
+    group.userData.tooltip = tooltipText;
 
-      ctx.font = `${fontSize}px Arial`;
-      ctx.fillStyle = color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const cx = canvas.width / 2;
-      let y = lineHeight / 2 + 20;
-      for (const line of lines) {
-        ctx.fillText(line, cx, y);
-        y += lineHeight;
-      }
-
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-      const sprite = new THREE.Sprite(material);
-
-      const scale = 0.01 * fontSize;
-      sprite.scale.set(scale * (canvas.width / canvas.height), scale * lines.length, 1);
-      return sprite;
-    }
-
-    // 根據 VB 傳入的 labelData 產生 3D 文字
-    for (const label of labelData) {
-      const sprite = createTextLabel(label.text, label.color, label.size);
-      sprite.position.set(label.pos.x, label.pos.y, label.pos.z);
-      scene.add(sprite);
-    }
-
-
-    // === 建立自訂箭頭 ===
-    function createCustomArrow(dir, pos, length, color, radius = 0.05, scale = 1) {
-        const group = new THREE.Group();
-
-        // 箭桿
-        const shaftGeo = new THREE.CylinderGeometry(radius, radius, length * 0.8, 8);
-        const shaftMat = new THREE.MeshBasicMaterial({ color });
-        const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-        shaft.position.y = length * 0.4;
-        shaft.userData.isHighlightable = true;
-        group.add(shaft);
-
-        // 箭頭錐
-        const coneGeo = new THREE.ConeGeometry(radius * 1.8, length * 0.35, 16); // 可調尖度
-        const coneMat = new THREE.MeshBasicMaterial({ color });
-        const cone = new THREE.Mesh(coneGeo, coneMat);
-        cone.position.y = length * 0.9;
-        cone.userData.isHighlightable = true;
-        group.add(cone);
-
-        // 方向
-        const axis = new THREE.Vector3(0, 1, 0);
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, dir.clone().normalize());
-        group.quaternion.copy(quaternion);
-        group.position.copy(pos);
-
-        group.scale.set(scale, scale, scale);
-
-        return group;
-    }
-
-    // === 建立箭頭列表 ===
-    const arrows = [];
-    for (const data of arrowData) {
-        const dir = new THREE.Vector3(data.dir.x, data.dir.y, data.dir.z).normalize();
-        const pos = new THREE.Vector3(data.pos.x, data.pos.y, data.pos.z);
-        const arrow = createCustomArrow(dir, pos, data.len, data.color, 0.1, 1);
-        arrow.userData = {
-            url: data.url,
-            basePos: pos.clone(),
-            dir: dir.clone(),
-            phase: Math.random() * Math.PI * 2
-        };
-        scene.add(arrow);
-        arrows.push(arrow);
-    }
-
-     // === 滑鼠偵測 + Tooltip ===
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    const tooltip = document.getElementById("tooltip");
-
-    window.addEventListener('mousemove', (event) => {
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(interactables, false);
-
-      if (hits.length > 0) {
-        const hit = hits[0].object;
-        tooltip.innerText = hit.userData.tooltip;
-        tooltip.style.left = `${event.clientX + 10}px`;
-        tooltip.style.top = `${event.clientY + 10}px`;
-        tooltip.style.display = 'block';
-        tooltip.style.opacity = 1;
-
-        // 可選：hover 亮一下
-        if (hit.material) hit.material.emissive = new THREE.Color(0x00ff00);
-      } else {
-        tooltip.style.display = 'none';
-      }
-    });
-
-    // === 點擊開啟連結 ===
-    window.addEventListener('click', (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(scene.children, true);
-        if (intersects.length > 0) {
-            let obj = intersects[0].object;
-            while (obj && !obj.userData.url) obj = obj.parent;
-            if (obj && obj.userData.url) window.open(obj.userData.url, '_blank');
+    // 註冊可互動 Mesh
+    group.traverse(obj => {
+        if (obj.isMesh) {
+            obj.userData.tooltip = tooltipText;
+            interactables.push(obj);
         }
     });
 
-    // === 能量脈衝函式 ===
-    function createEnergyPulse(position, color = 0x00ffcc) {
-        const geo = new THREE.SphereGeometry(0.5, 32, 32);
-        const mat = new THREE.MeshBasicMaterial({
-            color,
-            transparent: true,
-            opacity: 0.5,
-            side: THREE.DoubleSide
-        });
-        const pulse = new THREE.Mesh(geo, mat);
-        pulse.position.copy(position);
-        scene.add(pulse);
+    group.userData.animPhase = Math.random() * Math.PI * 2;
+    group.userData.animDir = targetDir.clone().multiplyScalar(0.2);
 
-        const start = performance.now();
-        const duration = 600;
-        const animatePulse = () => {
-            const elapsed = performance.now() - start;
-            const progress = elapsed / duration;
-            const scale = 1 + progress * 2.5;
-            pulse.scale.set(scale, scale, scale);
-            pulse.material.opacity = 0.5 * (1 - progress);
-            if (progress < 1) requestAnimationFrame(animatePulse);
-            else {
-                scene.remove(pulse);
-                pulse.geometry.dispose();
-                pulse.material.dispose();
-            }
-        };
-        animatePulse();
+    scene.add(group);
+    return group;
+}
+
+// === 建立光球工廠 ===
+function createLight(position, color, tooltipText) {
+    const geo = new THREE.SphereGeometry(0.3, 32, 32);
+    const mat = new THREE.MeshBasicMaterial({ color });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(position);
+    mesh.userData.tooltip = tooltipText;
+    scene.add(mesh);
+    interactables.push(mesh);
+    return mesh;
+}
+
+// === 根據資料建立物件 ===
+const arrows = [];
+for (const obj of data) {
+    if (obj.type === "arrow") {
+        const arrow = createArrow(
+            new THREE.Vector3(obj.pos.x, obj.pos.y, obj.pos.z),
+            new THREE.Vector3(obj.dir.x, obj.dir.y, obj.dir.z),
+            0xff5533,
+            obj.tooltip
+        );
+        arrows.push(arrow);
     }
-
-    // === 動畫 ===
-    let t = 0;
-    function animate() {
-        requestAnimationFrame(animate);
-        t += 0.05;
-
-        // 箭頭呼吸移動
-        arrows.forEach(arrow => {
-            const amplitude = 0.4;
-            const offset = Math.sin(t + arrow.userData.phase) * amplitude;
-            const newPos = arrow.userData.basePos.clone()
-                .add(arrow.userData.dir.clone().multiplyScalar(offset));
-            arrow.position.copy(newPos);
-        });
-
-        controls.update();
-        renderer.render(scene, camera);
+    if (obj.type === "light") {
+        createLight(new THREE.Vector3(obj.pos.x, obj.pos.y, obj.pos.z), 0x33ff66, obj.tooltip);
     }
-    animate();
+}
 
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+// === 動畫 ===
+function animate(time) {
+    requestAnimationFrame(animate);
+    // 呼吸動畫
+    arrows.forEach(a => {
+        const phase = time * 0.002 + a.userData.animPhase;
+        const offset = Math.sin(phase) * 0.3;
+        a.position.addScaledVector(a.userData.animDir, offset * 0.02);
     });
-    </script>
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+
+// === 滑鼠移動 Tooltip ===
+window.addEventListener('mousemove', (event) => {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(interactables, false);
+
+    if (hits.length > 0) {
+        const hit = hits[0].object;
+        tooltip.innerText = hit.userData.tooltip || "";
+        tooltip.style.left = `${event.clientX + 10}px`;
+        tooltip.style.top = `${event.clientY + 10}px`;
+        tooltip.style.display = 'block';
+    } else {
+        tooltip.style.display = 'none';
+    }
+});
+
+// === 視窗調整 ===
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
 </body>
 </html>
