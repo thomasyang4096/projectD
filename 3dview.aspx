@@ -59,27 +59,40 @@
     // === 載入 GLB 模型 ===
     const loader = new GLTFLoader();
     loader.load('3d/abc.glb', (gltf) => scene.add(gltf.scene));
- // ====== 建立文字 ======
-    function createTextLabel(text, color = '#ffffff', fontSize = 48) {
+
+    // === 支援換行的 createTextLabel ===
+    function createTextLabel(text, color = '#ffffff', fontSize = 48, maxWidth = 512) {
+      const lines = text.split(/\r?\n/); // 支援 VB vbLf 換行
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       ctx.font = `${fontSize}px Arial`;
-      const textWidth = ctx.measureText(text).width;
-      canvas.width = textWidth + 20;
-      canvas.height = fontSize + 20;
+
+      let textWidth = 0;
+      for (const line of lines)
+        textWidth = Math.max(textWidth, ctx.measureText(line).width);
+
+      const lineHeight = fontSize * 1.2;
+      canvas.width = Math.min(textWidth + 40, maxWidth);
+      canvas.height = lineHeight * lines.length + 40;
 
       ctx.font = `${fontSize}px Arial`;
       ctx.fillStyle = color;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      const cx = canvas.width / 2;
+      let y = lineHeight / 2 + 20;
+      for (const line of lines) {
+        ctx.fillText(line, cx, y);
+        y += lineHeight;
+      }
 
       const texture = new THREE.CanvasTexture(canvas);
       const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
       const sprite = new THREE.Sprite(material);
 
       const scale = 0.01 * fontSize;
-      sprite.scale.set(scale * (canvas.width / canvas.height), scale, 1);
+      sprite.scale.set(scale * (canvas.width / canvas.height), scale * lines.length, 1);
       return sprite;
     }
 
