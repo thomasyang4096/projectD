@@ -8,6 +8,20 @@
     <style>
         body { margin: 0; overflow: hidden; background: #111; }
         canvas { cursor: pointer; }
+  /* Tooltip 外觀 */
+    #tooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.7);
+      color: #0f0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: "Microsoft JhengHei", sans-serif;
+      font-size: 14px;
+      pointer-events: none;
+      white-space: nowrap;
+      display: none;
+      transition: opacity 0.2s ease;
+    }
     </style>
 
     <script type="importmap">
@@ -22,7 +36,7 @@
 
 <body>
     <form id="form1" runat="server"></form>
-
+ <div id="tooltip"></div>
     <script>
      //   const arrowData = <%= ArrowJson %>;
     // ====== 從 VB 傳入資料 ======
