@@ -1,33 +1,37 @@
 Imports System.Web.Script.Serialization
 
-Partial Class three3dview
+Partial Class ThreeDView
     Inherits System.Web.UI.Page
 
-    Public ObjectJson As String
-
     Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
-        Dim objs As New List(Of Object)
+        If Not IsPostBack Then
+            Dim sceneObjects As New List(Of Object)
 
-        ' === 三個箭頭 + 三個光球示例 ===
-        Dim dirs() As (Double, Double, Double) = { (0, 0, 1), (1, 0, 0), (-1, 0, 1) }
-        For i As Integer = 0 To 2
-            ' 箭頭
-            objs.Add(New With {
-                .type = "arrow",
-                .tooltip = $"這是第 {i + 1} 個箭頭",
-                .pos = New With {.x = i * 2 - 2, .y = 1.5, .z = 0},
-                .dir = New With {.x = dirs(i).Item1, .y = dirs(i).Item2, .z = dirs(i).Item3}
-            })
+            ' === 箭頭 ===
+            For i As Integer = 1 To 3
+                sceneObjects.Add(New With {
+                    .type = "arrow",
+                    .tooltip = $"箭頭 {i}",
+                    .url = $"https://example.com/{i}",
+                    .basePos = New With {.x = (i - 2) * 2, .y = 1.5, .z = 0},
+                    .dir = New With {.x = Math.Cos(i), .y = 0, .z = Math.Sin(i)},
+                    .phase = i
+                })
+            Next
 
-            ' 光球
-            objs.Add(New With {
-                .type = "light",
-                .tooltip = $"這是第 {i + 1} 顆光球",
-                .pos = New With {.x = i * 2 - 2, .y = 2, .z = -2}
-            })
-        Next
+            ' === 光球 ===
+            For i As Integer = 1 To 3
+                sceneObjects.Add(New With {
+                    .type = "light",
+                    .tooltip = $"光球 {i}",
+                    .url = "",
+                    .pos = New With {.x = (i - 2) * 2, .y = 2, .z = -3}
+                })
+            Next
 
-        Dim js As New JavaScriptSerializer()
-        ObjectJson = js.Serialize(objs)
+            ' === JSON 給前端 ===
+            Dim serializer As New JavaScriptSerializer()
+            hfSceneData.Value = serializer.Serialize(sceneObjects)
+        End If
     End Sub
 End Class
