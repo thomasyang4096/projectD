@@ -77,7 +77,7 @@ function createArrow(position, direction, color, tooltipText) {
     // 註冊可互動 Mesh
     group.traverse(obj => {
         if (obj.isMesh) {
-            obj.userData.tooltip = tooltipText;
+            obj.userData = group.userData; // 子 Mesh 指向完整 userData
             interactables.push(obj);
         }
     });
@@ -134,6 +134,7 @@ animate();
 
 // === 滑鼠移動 Tooltip ===
 window.addEventListener('mousemove', (event) => {
+ event.preventDefault(); // 防止頁面滾動
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
