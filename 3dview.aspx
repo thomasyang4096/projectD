@@ -62,7 +62,7 @@
 
     // === 支援換行的 createTextLabel ===
     function createTextLabel(text, color = '#ffffff', fontSize = 48, maxWidth = 512) {
-      const lines = text.split(/\r?\n/); // 支援 VB vbLf 換行
+      const lines = text.split('\n'); // 支援 VB vbLf 換行
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       ctx.font = `${fontSize}px Arial`;
