@@ -24,7 +24,10 @@
     <form id="form1" runat="server"></form>
 
     <script>
-        const arrowData = <%= ArrowJson %>;
+     //   const arrowData = <%= ArrowJson %>;
+    // ====== 從 VB 傳入資料 ======
+    const arrowData = <%= ArrowJson %>;
+    const labelData = <%= LabelJson %>;
     </script>
 
     <script type="module">
@@ -56,6 +59,37 @@
     // === 載入 GLB 模型 ===
     const loader = new GLTFLoader();
     loader.load('3d/abc.glb', (gltf) => scene.add(gltf.scene));
+ // ====== 建立文字 ======
+    function createTextLabel(text, color = '#ffffff', fontSize = 48) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.font = `${fontSize}px Arial`;
+      const textWidth = ctx.measureText(text).width;
+      canvas.width = textWidth + 20;
+      canvas.height = fontSize + 20;
+
+      ctx.font = `${fontSize}px Arial`;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+
+      const scale = 0.01 * fontSize;
+      sprite.scale.set(scale * (canvas.width / canvas.height), scale, 1);
+      return sprite;
+    }
+
+    // 根據 VB 傳入的 labelData 產生 3D 文字
+    for (const label of labelData) {
+      const sprite = createTextLabel(label.text, label.color, label.size);
+      sprite.position.set(label.pos.x, label.pos.y, label.pos.z);
+      scene.add(sprite);
+    }
+
 
     // === 建立自訂箭頭 ===
     function createCustomArrow(dir, pos, length, color, radius = 0.05, scale = 1) {
