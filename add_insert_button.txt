@@ -55,12 +55,14 @@ Private Sub BindGrid()
 
     Dim dt As DataTable = GetData()
 
-    If ViewState("InsertMode") = True Then
+    ' Insert Mode → 在符合 DataKey 群組插入空白 row
+    If ViewState("InsertMode") IsNot Nothing AndAlso ViewState("InsertMode") Then
+
         Dim newRow As DataRow = dt.NewRow()
-        newRow("DataKeyColumn") = DBNull.Value
-        newRow("Name") = ""
-        newRow("Value") = ""
-        dt.Rows.InsertAt(newRow, 0)   ' 插在最前面
+        newRow("DataKey") = ViewState("InsertTargetKey") ' 你要決定加在哪組
+        ' 其他欄位預設空白
+        dt.Rows.InsertAt(newRow, 0)
+
     End If
 
     GridView1.DataSource = dt
