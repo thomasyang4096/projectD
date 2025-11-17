@@ -1,0 +1,26 @@
+<asp:TemplateField HeaderText="Action">
+    <ItemTemplate>
+        <asp:Button ID="btnEdit" runat="server" Text="Edit" CommandName="Edit" />
+        <asp:Button ID="btnAdd"  runat="server" Text="Add" CommandName="AddItem" />
+    </ItemTemplate>
+</asp:TemplateField>
+
+Protected Sub GridView1_RowDataBound(sender As Object, e As GridViewRowEventArgs) _
+    Handles GridView1.RowDataBound
+
+    If e.Row.RowType = DataControlRowType.DataRow Then
+
+        Dim currKey = GridView1.DataKeys(e.Row.RowIndex).Value
+        Dim btnAdd As Button = CType(e.Row.FindControl("btnAdd"), Button)
+
+        If e.Row.RowIndex = 0 Then
+            btnAdd.Visible = True
+            Exit Sub
+        End If
+
+        Dim prevKey = GridView1.DataKeys(e.Row.RowIndex - 1).Value
+
+        btnAdd.Visible = (currKey <> prevKey)
+
+    End If
+End Sub
