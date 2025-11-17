@@ -1,24 +1,31 @@
 Protected Sub GridView1_PreRender(sender As Object, e As EventArgs) Handles GridView1.PreRender
-    Dim colIndex As Integer = 0 '要合併的欄位
+    ' 要合併的欄位索引
+    Dim mergeCols As New List(Of Integer) From {1, 2} 
+
     Dim rowCount As Integer = GridView1.Rows.Count
 
-    For i As Integer = rowCount - 2 To 0 Step -1
-        Dim curr As GridViewRow = GridView1.Rows(i)
-        Dim nextRow As GridViewRow = GridView1.Rows(i + 1)
+    For Each colIndex As Integer In mergeCols
+        ' 從倒數第二列開始，往上比對
+        For i As Integer = rowCount - 2 To 0 Step -1
+            Dim curr As GridViewRow = GridView1.Rows(i)
+            Dim nextRow As GridViewRow = GridView1.Rows(i + 1)
 
-        ' 使用 DataKey 判斷
-        Dim currKey As Object = GridView1.DataKeys(i).Value
-        Dim nextKey As Object = GridView1.DataKeys(i + 1).Value
+            ' 用 DataKey 判斷是否合併（也可以改用 Cells(colIndex).Text）
+            Dim currKey As Object = GridView1.DataKeys(i).Value
+            Dim nextKey As Object = GridView1.DataKeys(i + 1).Value
 
-        If currKey = nextKey Then
-            ' 合併儲存格
-            If nextRow.Cells(colIndex).RowSpan < 2 Then
-                curr.Cells(colIndex).RowSpan = 2
-            Else
-                curr.Cells(colIndex).RowSpan = nextRow.Cells(colIndex).RowSpan + 1
+            ' 如果 DataKey 相同，就合併該欄
+            If currKey = nextKey Then
+                ' 設定 RowSpan
+                If nextRow.Cells(colIndex).RowSpan < 2 Then
+                    curr.Cells(colIndex).RowSpan = 2
+                Else
+                    curr.Cells(colIndex).RowSpan = nextRow.Cells(colIndex).RowSpan + 1
+                End If
+
+                ' 隱藏下一列的儲存格
+                nextRow.Cells(colIndex).Visible = False
             End If
-
-            nextRow.Cells(colIndex).Visible = False
-        End If
+        Next
     Next
 End Sub
