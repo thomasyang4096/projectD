@@ -25,11 +25,27 @@ Protected Sub GridView1_RowDataBound(sender As Object, e As GridViewRowEventArgs
     End If
 End Sub
 
-Protected Sub GridView1_RowCommand(sender As Object, e As GridViewCommandEventArgs) Handles GridView1.RowCommand
+<asp:LinkButton ID="btnAdd" runat="server"
+    CommandName="AddItem"
+    CommandArgument='<%# Container.DataItemIndex %>'
+    Text="Add" />
+
+Protected Sub GridView1_RowCommand(sender As Object, e As GridViewCommandEventArgs) _
+    Handles GridView1.RowCommand
 
     If e.CommandName = "AddItem" Then
+
+        ' 取得按下按鈕的 rowIndex
+        Dim rowIndex As Integer = Convert.ToInt32(e.CommandArgument)
+        ' 取得該列的 idx (DataKey)
+        Dim targetIdx = GridView1.DataKeys(rowIndex).Value
+
+        ' 記錄 InsertMode 與目標 idx
         ViewState("InsertMode") = True
+        ViewState("InsertTargetIdx") = targetIdx
+
         BindGrid()
+
     End If
 
 End Sub
@@ -38,12 +54,12 @@ Private Sub BindGrid()
 
     Dim dt As DataTable = GetData()
 
-    If ViewState("InsertMode") = True Then
+    If ViewState("InsertMode") IsNot Nothing AndAlso ViewState("InsertMode") Then
         Dim newRow As DataRow = dt.NewRow()
-        newRow("DataKeyColumn") = DBNull.Value
+        newRow("idx") = ViewState("InsertTargetIdx") ' 同組 idx
         newRow("Name") = ""
         newRow("Value") = ""
-        dt.Rows.InsertAt(newRow, 0)   ' 插在最前面
+        dt.Rows.InsertAt(newRow, 0)  ' 插入在最前面
     End If
 
     GridView1.DataSource = dt
@@ -80,4 +96,13 @@ Protected Sub GridView1_RowUpdating(sender As Object, e As GridViewUpdateEventAr
 
     BindGrid()
 
+End Sub
+
+Protected Sub GridView1_PreRender(sender As Object, e As EventArgs) Handles Me.PreRender
+    If ViewState("InsertMode") = True Then
+        GridView1.EditIndex = 0
+    End If
+
+    ' 你的 MergeCells() 也放在這裡
+    MergeCells()
 End Sub
