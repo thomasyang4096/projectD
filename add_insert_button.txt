@@ -33,3 +33,49 @@ Protected Sub GridView1_RowCommand(sender As Object, e As GridViewCommandEventAr
     End If
 
 End Sub
+
+Private Sub BindGrid()
+
+    Dim dt As DataTable = GetData()
+
+    If ViewState("InsertMode") = True Then
+        Dim newRow As DataRow = dt.NewRow()
+        newRow("DataKeyColumn") = DBNull.Value
+        newRow("Name") = ""
+        newRow("Value") = ""
+        dt.Rows.InsertAt(newRow, 0)   ' 插在最前面
+    End If
+
+    GridView1.DataSource = dt
+    GridView1.DataBind()
+
+End Sub
+
+Private Sub BindGrid()
+
+    Dim dt As DataTable = GetData()
+
+    If ViewState("InsertMode") = True Then
+        Dim newRow As DataRow = dt.NewRow()
+        newRow("DataKeyColumn") = DBNull.Value
+        newRow("Name") = ""
+        newRow("Value") = ""
+        dt.Rows.InsertAt(newRow, 0)   ' 插在最前面
+    End If
+
+    GridView1.DataSource = dt
+    GridView1.DataBind()
+
+End Sub
+
+Protected Sub GridView1_RowUpdating(sender As Object, e As GridViewUpdateEventArgs) Handles GridView1.RowUpdating
+
+    ' 讀入 TextBox 等控制項值，寫入資料庫
+    ' ...
+
+    ViewState("InsertMode") = Nothing   ' 回到一般模式
+    GridView1.EditIndex = -1
+
+    BindGrid()
+
+End Sub
