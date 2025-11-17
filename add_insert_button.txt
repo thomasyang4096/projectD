@@ -41,7 +41,8 @@ End Sub
 
 Protected Sub GridView1_RowCommand(sender As Object, e As GridViewCommandEventArgs) _
     Handles GridView1.RowCommand
-
+ ' 測試：先印出 CommandName
+    Response.Write("RowCommand triggered: " & e.CommandName & "<br>")
     If e.CommandName = "AddItem" Then
 
         ' 取得按下按鈕的 rowIndex
