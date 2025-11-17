@@ -25,7 +25,7 @@ Protected Sub GridView1_RowDataBound(sender As Object, e As GridViewRowEventArgs
     End If
 End Sub
 
-Protected Sub GridView1_RowCommand(sender As Object, e As GridViewCommandEventArgs)
+Protected Sub GridView1_RowCommand(sender As Object, e As GridViewCommandEventArgs) Handles GridView1.RowCommand
 
     If e.CommandName = "AddItem" Then
         ViewState("InsertMode") = True
