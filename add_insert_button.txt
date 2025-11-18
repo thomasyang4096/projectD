@@ -67,10 +67,14 @@ Private Sub BindGrid()
     If ViewState("InsertMode") IsNot Nothing AndAlso ViewState("InsertMode") Then
         Dim newRow As DataRow = dt.NewRow()
         newRow("idx") = ViewState("InsertTargetIdx") ' 同組 idx
-        newRow("Name") = ""
-        newRow("Value") = ""
-        dt.Rows.InsertAt(newRow, 0)  ' 插入在最前面
-    End If
+
+    ' ⭐ 這裡複製欄位資料（重要）
+    newRow("col1") = dt.Rows(insertIndex)("col1")
+    newRow("col2") = dt.Rows(insertIndex)("col2")
+     '   dt.Rows.InsertAt(newRow, 0)  ' 插入在最前面
+    ' 插入新 row 在群組第一筆之前
+    dt.Rows.InsertAt(newRow, insertIndex)
+
 
     GridView1.DataSource = dt
     GridView1.DataBind()
